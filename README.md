@@ -38,4 +38,6 @@ Never commit credentials. Update the README with commands actually run, observed
 
 ## Visual design
 
+Dashboard surfaces, buttons and avatars use flat fills in both themes. The next-step card uses pale lavender with dark text and a solid purple action; chart shading is retained, as requested by the owner. Verified visually in the local browser preview.
+
 The connected dashboard and desktop/mobile viewer include the light/dark redesign and compact pixel viewer. `npm run dev:design` serves the separate visual gallery on port 4175. The gallery and planning tabs use sample data; the default Live game uses FastAPI. See [design notes](docs/pixel-overlay-design.md).
