@@ -1,5 +1,6 @@
 import {createDashboardAPI} from './api.mjs';
 import {createCaptionQueue} from './caption-collector.mjs';
+import {createRefreshRunner} from './refresh-flight.mjs';
 const api = createDashboardAPI();
 const $ = id => document.getElementById(id);
 let snapshot = null, channel = null, busy = false, epoch = 0, refreshVersion = 0, queue = null, player = null, uploadTimer = null, playerScript = null;
@@ -59,7 +60,7 @@ function renderSnapshot() {
   }
   if (!snapshot.candidates.length) host.append(node('p',api.allowed('question_review') ? 'Waiting for usable source captions.' : 'Question review permission is required.'));
 }
-async function refresh() {
+async function refreshSnapshot() {
   const current = epoch, requestVersion = ++refreshVersion;
   try {
     const identity = await api.session(channel);
@@ -79,10 +80,11 @@ async function refresh() {
     error(err.message);
   }
 }
+const refresh = createRefreshRunner(refreshSnapshot, () => epoch);
 async function action(fn) {
   if (busy) return;
   busy = true; $('live-workspace').disabled = true; error(''); renderSnapshot();
-  try { await fn(); if (api.identity) await refresh(); }
+  try { await fn(); if (api.identity) await refresh({force:true}); }
   catch (err) { error(err.message); if ([401,403].includes(err.status)) await refresh(); }
   finally { busy = false; $('live-workspace').disabled = false; renderSnapshot(); }
 }
