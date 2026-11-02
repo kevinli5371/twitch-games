@@ -80,7 +80,7 @@ def main() -> None:
             for path, expected in [
                 ("/health/ready", 503),
                 ("/docs", 200),
-                ("/api/v1/channels/12345/game-state", 404),
+                ("/api/v1/channels/12345/game-state", 401),
             ]:
                 try:
                     with urlopen(base + path, timeout=2) as response:

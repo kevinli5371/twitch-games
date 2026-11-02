@@ -1,122 +1,119 @@
 # Twitch Games backend
 
-Python + FastAPI backend for the quote-completion Twitch Extension. Supabase PostgreSQL is the selected database. All new backend code, configuration, tests, generated contracts and documentation live in this directory.
+FastAPI + Supabase PostgreSQL backend for the native Twitch quote-completion Extension. All backend code, migrations, configuration, tests and handoff documents live here. This README and `AGENTS.md` record later owner decisions that supersede the historical root specifications and foundation-only reports.
 
-## Current status — persistence foundation
+## Implemented
 
-Implemented: application factory, validated environment settings, explicit-origin CORS configuration, liveness/readiness endpoints, public/private/dashboard Pydantic contracts, artificial frontend fixtures, a planned OpenAPI handoff, and automated tests.
+- Twitch authorization-code login, verified profiles, encrypted access/refresh tokens, rotating opaque HttpOnly sessions, CSRF checks, startup/hourly token validation and serialized refresh. No Supabase Auth.
+- Owner-controlled moderator grants: `question_review`, `live_control`, `settings`. Every protected operation checks current database grants. Owners alone manage grants. Question review may see hidden answers; other grants cannot.
+- Private PostgreSQL schema and versioned Alembic migrations; no automatic migration at API startup.
+- Authenticated current-stream registration via Helix; retry-safe caption batches with source evidence and current-stream isolation.
+- Algorithmic quote selection and backend spelling/alias matching. No runtime LLM or transcription provider.
+- Manual round starts, actual 30-second closure, manual advancement, editable private answers, atomic scoring, shared ranks and final leaderboards.
+- Persistent deadlines and state versions; restart recovery; durable/coalesced Twitch PubSub notifications containing only channel/version information.
+- Runtime OpenAPI, frontend handoff, Docker packaging and repeatable real-server/database verification.
 
-**Persistence implemented and tested:** PostgreSQL connection/transactions, private-schema migrations, database constraints and live readiness. See [Step 2 verification](docs/step-2-verification.md). Hosted Supabase needs a configured connection URI. Twitch auth, intake, matching, gameplay, live messaging and deployment remain later work.
+This implements the backend for quote mode. Viewer and dashboard UI belong to the other teammates. Niche, hive mind, ad triggers, VOD import, bank scheduling and audio transcription are not implemented. PR #1's dashboard is a fixture preview, not proof of connected frontend functionality.
 
-The runtime returns **503 from overall readiness** while authentication/gameplay remain unfinished; its database field reports the actual configured connection and migration state. Liveness returns 200 when the foundation process is running. Game routes return 404 rather than fake successful responses.
+Read [frontend handoff](docs/frontend-handoff.md), [current API](docs/openapi.json), [implementation plan](docs/implementation-plan.md), [verification](docs/backend-verification.md), and [PR #1 reconciliation](docs/pr-1-reconciliation.md).
 
-The [implementation plan](docs/implementation-plan.md) records the owner's updated instruction: build the full backend with automatic verification between stages; pause only for necessary input or external configuration.
+## Confirmed rules
 
-Each step also requires agent-run real-server and relevant live integration checks wherever feasible, with commands/results documented separately from unit tests. The owner should not need to manually repeat checks that can be automated. Missing external credentials or test resources must be disclosed explicitly.
+The streamer starts each round. The database records an exact 30-second window. The timer closes/scorers finalize it; the streamer advances manually. An early close/end during answering is rejected, preserving that window. There is no pause/skip policy in this release.
 
-## Product decisions carried forward
+Correct: 1 point. Incorrect: 0. No speed bonus. Latest accepted answer revision wins. Retries preserve the original receipt; edits require a new request ID. Scores reset for each started game; ties share ranks. Questions are selected automatically from current-stream text, with immutable round quotes/answers/aliases/policy snapshots.
 
-- Desktop: native Twitch Extension over the video, not a browser extension or OBS graphics.
-- Mobile: Twitch's separate mobile Extension view.
-- Viewers submit private free text through our UI, normally completing one missing word.
-- Streamer chooses when to activate the game; interim and final results/leaderboards are required.
-- Kevin owns the backend; the dashboard teammate owns the browser-side caption collector.
-- Quote selection and answer evaluation are **algorithmic, with no runtime LLM**. Later steps will add deterministic passage/word ranking and a conservative server-side matcher with normalization, approved aliases and bounded Damerau–Levenshtein typo handling. No matching threshold or score policy is implemented by Step 1.
-- Captions remain conditional and unverified. A caption event is not a universal transcript endpoint.
-- Niche, hive mind, automatic ad/event triggers, public-chat answers and VOD import are deferred.
+The owner subsequently confirmed moderator access: `question_review` may see unrevealed answers. `live_control` and `settings` alone may not. App grants are distinct from a Twitch moderator badge; a badge alone grants no privileged backend access.
 
-These later algorithmic and approval decisions supersede earlier model/worker proposals in the original [product spec](../docs/product-spec.md) and [backend scope](../docs/backend-scope.md). Start with one service; add separate processing infrastructure only when justified by the actual workload.
+## Setup
 
-## Local setup
-
-Run from the repository root:
+From `backend/`, using Python 3.12–3.14 (verified with 3.14.3):
 
 ```sh
-cd backend
 python3 -m venv .venv
 .venv/bin/python -m pip install -e '.[dev]' -c requirements-dev.lock
+cp .env.example .env
 ```
 
-Python 3.12–3.14 is declared supported by the project metadata. The checked dependency snapshot and verification report state which interpreter was actually tested; other versions/platforms are not implicitly verified. `requirements-dev.lock` pins the tested application/test dependency set. Build tooling follows the range in `pyproject.toml`.
+Fill `.env` locally; it is Git-ignored and excluded from the Docker build. Configuration is read from the environment and `.env` in the current working directory. Run from `backend/`.
 
-Optionally copy `.env.example` to `.env`. Database connectivity requires the PostgreSQL URI described below; omitting it keeps liveness available and reports the database as not configured. Do not add Twitch, Supabase, database or model credentials to fixtures, Git, or viewer code.
+| Variable | Purpose |
+| --- | --- |
+| `TWITCH_GAMES_DATABASE_URL` | Supabase PostgreSQL URI, with explicit TLS. Direct/session-pooler URI recommended for migrations. |
+| `TWITCH_GAMES_TWITCH_CLIENT_ID` | OAuth Application Client ID for dashboard login and public Helix lookups. |
+| `TWITCH_GAMES_TWITCH_CLIENT_SECRET` | OAuth Application Client Secret, server-only. |
+| `TWITCH_GAMES_TWITCH_REDIRECT_URI` | Exact registered backend callback. Dev: `http://localhost:8000/api/v1/auth/twitch/callback`. |
+| `TWITCH_GAMES_TOKEN_ENCRYPTION_KEY` | Stable Fernet key protecting stored access/refresh tokens. |
+| `TWITCH_GAMES_TWITCH_EXTENSION_CLIENT_ID` | Extension Client ID. |
+| `TWITCH_GAMES_TWITCH_EXTENSION_SECRET` | Base64 shared **Secret Keys → Key**, not the OAuth Client Secret. |
+| `TWITCH_GAMES_TWITCH_EXTENSION_OWNER_ID` | Numeric ID of the Extension creator. The Application may have a different owner. |
+| `TWITCH_GAMES_DASHBOARD_URL` | Fixed successful-login destination. Dev for PR #1: `http://localhost:4173`. No browser-supplied return URL is used. |
+| `TWITCH_GAMES_CORS_ORIGINS` | JSON list of exact frontend origins; include the dashboard and actual Extension origin. Default `[]`. |
+| `TWITCH_GAMES_ENVIRONMENT` | `local` (default), `test`, or `production`. |
+| `TWITCH_GAMES_DOCS_ENABLED` | Default `true`; must be `false` in production. |
+| `TWITCH_GAMES_DATABASE_CONNECT_TIMEOUT_SECONDS` | Default 3; allowed 1–30. |
+| `TWITCH_GAMES_DATABASE_POOL_SIZE` | Default 5, no overflow; allowed 1–20. |
+
+The Application and Extension can belong to different teammates. The Extension owner ID must match the Extension owner. Neither credential set determines which streamer is signed in: verified Twitch identity determines that.
+
+Generate the encryption key once:
 
 ```sh
-.venv/bin/python -m uvicorn twitch_games.main:app --host 127.0.0.1 --port 8000
+.venv/bin/python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'
 ```
 
-Local URLs:
+No Supabase Data API key, Supabase Auth secret, or AI key is required. `TWITCH_GAMES_TEST_TWITCH_BASE_URL` and `TWITCH_GAMES_TEST_DATABASE_URL` are test-harness-only; do not add them to ordinary `.env` files. The HTTP provider override is restricted to test-mode loopback.
 
-- `http://127.0.0.1:8000/health/live` — process liveness, HTTP 200.
-- `http://127.0.0.1:8000/health/ready` — honest dependency readiness, HTTP 503 until all required integrations are ready.
-- `http://127.0.0.1:8000/docs` — interactive documentation of **implemented health routes only**.
-- `http://127.0.0.1:8000/openapi.json` — runtime OpenAPI, not the planned game API.
+Read-only Twitch checks and explicit owner-ID setup:
 
-## Configuration
+```sh
+.venv/bin/python scripts/check_twitch.py --owner-login EXTENSION_OWNER_LOGIN --save-owner-id --check-extension
+```
 
-Settings are read from process environment and then `.env` in the current working directory. Run from `backend/` so the intended `.env` is used. Unknown entries in that file are rejected. Tests isolate environment variables and dotenv loading.
+This checks app credentials and an Extension authentication endpoint without sending Twitch messages. Actual viewer tokens, browser authorization, PubSub reception and captions require connected Twitch surfaces.
 
-| Variable | Default | Meaning |
-| --- | --- | --- |
-| `TWITCH_GAMES_ENVIRONMENT` | `local` | `local`, `test`, or `production`. |
-| `TWITCH_GAMES_DOCS_ENABLED` | `true` | Enables `/docs` and runtime `/openapi.json`. |
-| `TWITCH_GAMES_CORS_ORIGINS` | `[]` | JSON array of exact origins; empty grants no browser cross-origin access. |
-
-Example local origin: `["http://localhost:5173"]`. CORS is not authentication. Wildcards, credentials embedded in URLs, paths, queries and fragments are rejected. Production settings require docs disabled and explicit HTTPS origins. This is configuration validation, not a claim that the unfinished application is production-ready.
-
-## Database configuration and migrations
-
-Set `TWITCH_GAMES_DATABASE_URL` in `.env` to a PostgreSQL URI. Remote URIs must explicitly use `sslmode=require`, `verify-ca` or `verify-full`. Direct/session-pooler URIs work for migrations; transaction-pooler prepared statements are disabled by the driver configuration. `TWITCH_GAMES_DATABASE_CONNECT_TIMEOUT_SECONDS` defaults to 3, and `TWITCH_GAMES_DATABASE_POOL_SIZE` defaults to 5 with no overflow. Database URLs are secret settings and are not returned by health checks.
+## Migrations and run
 
 ```sh
 .venv/bin/alembic upgrade head
+.venv/bin/python -m uvicorn twitch_games.main:app --host 127.0.0.1 --port 8000 --no-access-log
+```
+
+Disable access logs so OAuth callback query codes are not logged. Do not enable SQL parameter logging. The backend never prints credentials through health/error responses.
+
+- `http://localhost:8000/health/live`: process health.
+- `http://localhost:8000/health/ready`: database revision and credential configuration; 503 when incomplete. Configuration readiness does not prove real caption delivery or device testing.
+- `http://localhost:8000/docs`: implemented API, development only.
+- `http://localhost:8000/api/v1/auth/twitch`: dashboard login.
+- `http://localhost:8000/api/v1/auth/me`: verified user/workspace/session JSON after login.
+
+The canonical schema is `twitch_games`. Do not apply PR #1's independent `game_private` SQL alongside these migrations as a second game/auth authority. See reconciliation notes first. Migrations refuse an unmanaged nonempty application schema.
+
+## Verification
+
+```sh
+.venv/bin/ruff check .
+.venv/bin/ruff format --check .
+.venv/bin/python -m pytest -q -m 'not integration' -W error
+.venv/bin/python scripts/postgres_checks.py
+.venv/bin/python scripts/docker_image_checks.py
 .venv/bin/python scripts/check_supabase.py
 ```
 
-The API never creates/migrates the database automatically. The migration CLI refuses an unmanaged nonempty application schema. All business tables are in private `twitch_games`, not `public`, with no direct client policies. Keep database credentials on the server; OAuth/JWT channel authorization is still required at the API layer.
+`postgres_checks.py` provisions disposable loopback PostgreSQL, tests migration upgrades/downgrades and legacy session preservation, runs all tests, then starts a real Uvicorn server for a full game. It verifies real HTTP OAuth, moderator grants, refresh/revocation, a true 30-second timer, a process restart, scoring and final standings. Twitch in that script is an explicitly identified HTTP fixture. Containers and test records are cleaned up.
 
-Hosted connection checks are read-only by default. To apply this app's schema and verify a temporary rolled-back insert after isolated Docker validation:
+After Docker verification, the hosted additive migration and a temporary rolled-back write can be checked with:
 
 ```sh
 .venv/bin/python scripts/check_supabase.py --apply-migrations --exercise-writes
 ```
 
-Never run the integration test suite or migration downgrades against the hosted project. The Docker script creates and removes its own disposable loopback-only database:
+Never point disposable integration tests or migration downgrades at hosted Supabase. Hosted checks preserve unrelated data.
 
-```sh
-.venv/bin/python scripts/postgres_checks.py
-```
+## Deployment
 
-This runs the real PostgreSQL tests plus real server HTTP probes through all database readiness states. The standalone smoke script also accepts `--database-status ok` for an explicitly configured, migrated connection. No Docker database is required for production; Supabase is the hosted target.
+`Dockerfile` pins the verified Python base image and runs as a non-root user. Environment files never enter the image. The Docker healthcheck probes liveness; configure platform readiness separately. Migrate explicitly before starting the new revision. A continuously running service is required for deadline closure and retry workers; their state is in PostgreSQL and survives process restarts.
 
-## Frontend handoff
+Use HTTPS, production mode, disabled docs, exact CORS origins, and matching registered callback/dashboard URLs. The HttpOnly cookie uses `SameSite=Lax`; serve dashboard and API on the same site (or reverse proxy API requests). On localhost, use `localhost` consistently rather than mixing it with `127.0.0.1`. CSRF tokens come from `/auth/me` and are required for cookie-authenticated POST/PUT/DELETE requests.
 
-Read [contracts and examples](docs/contracts.md). The [planned OpenAPI](docs/openapi.planned.json) and [artificial JSON fixtures](docs/examples.json) let both frontend teammates build without depending on invented live endpoints. Every planned operation is marked `x-implementation-status: planned`.
-
-Regenerate the checked-in handoff after changing contract models:
-
-```sh
-.venv/bin/python -m twitch_games.contracts.export
-```
-
-Canonical answers and source passages belong only in privileged dashboard contracts before reveal. Public answering-state contracts reject those fields. A submission receipt acknowledges receipt only; it does not say whether the answer is correct.
-
-## Checks
-
-```sh
-.venv/bin/python -m pytest -q
-.venv/bin/ruff check .
-.venv/bin/ruff format --check .
-.venv/bin/python -m pip check
-.venv/bin/python scripts/smoke_test.py
-```
-
-The test suite covers configuration failure, health truthfulness, CORS origin boundaries, unimplemented game routes, public/private contract separation, input preservation, cross-channel/stream consistency and reproducible contract exports. See [Step 1 verification](docs/step-1-verification.md) for actual results and limitations.
-
-The smoke test starts and stops a real Uvicorn process bound only to `127.0.0.1`, using an ephemeral port and isolated test configuration. It needs local socket permission and makes no calls to Twitch or Supabase.
-
-## Confirmed gameplay and remaining setup
-
-The owner selected manual round starts, automatic 30-second closure, manual advancement, 1 point for correct/0 for incorrect, no speed bonus, shared tie ranks, per-game score reset, and editable answers until closure. Quotes are automatically selected, with spelling tolerance and streamer-managed aliases. These rules will be implemented in the subsequent game stages; existing fixtures are still artificial and do not constitute working gameplay.
-
-Remaining external setup includes the hosted database URI, Twitch OAuth/Extension credentials, a captioned test channel and deployment configuration. Caption fallback and retention remain to be resolved if needed.
+Hosting/domain selection and actual desktop/iOS/Android Twitch surfaces remain external integration work. Do not claim deployment, caption-source feasibility, Twitch approval or device testing from the automated local checks.

@@ -5,15 +5,15 @@ On November 1, 2026 the owner initially requested approval at each step, then ex
 | Step | Deliverable | Verification gate | Approval status |
 | --- | --- | --- | --- |
 | 1 | FastAPI foundation, settings, health routes, typed frontend contracts and fixtures. | Startup/config validation, health behavior, public-data boundaries, contract examples and lint. | Implemented, verified and accepted. |
-| 2 | Supabase PostgreSQL connection, schema and migrations. | Disposable PostgreSQL migration/transaction checks and separately identified Supabase connection test. | Locally verified; hosted URI pending. |
-| 3 | Twitch streamer OAuth and Extension-token authorization. | Invalid/expired/wrong-channel credentials, viewer/controller boundaries; separate live auth validation. | Authorized; pending implementation and dependencies. |
-| 4 | Transcript intake and caption feasibility. | Retries, deduplication, ordering, stale state and a real caption-source test with the dashboard owner. | Authorized; pending implementation and dependencies. |
-| 5 | Algorithmic passage/word ranking and quote candidates. | Source preservation, one exact blank, quality filters, repeats and reproducible fixture output. | Authorized; pending implementation and dependencies. |
-| 6 | Conservative backend answer matcher. | Owner-reviewed typo/alias examples, short-word collisions, consistent outcomes and input preservation. | Authorized; pending implementation and dependencies. |
-| 7 | Game lifecycle, private submissions, scoring and leaderboards. | Agreed rules, concurrent close/submit, retry-safe points, interim/final results. | Authorized; pending implementation and dependencies. |
-| 8 | Live synchronization and frontend/deployment integration. | Reconnect/restart recovery, multiple viewers, real Twitch surfaces and actual device testing with teammates. | Authorized; pending implementation and dependencies. |
+| 2 | Supabase PostgreSQL connection, schema and migrations. | Disposable PostgreSQL migration/transaction checks and separately identified Supabase connection test. | Locally verified and hosted Supabase connected. |
+| 3 | Twitch streamer OAuth and Extension-token authorization. | Invalid/expired/wrong-channel credentials, viewer/controller boundaries; separate live auth validation. | Implemented locally; external integration validation pending. |
+| 4 | Transcript intake and caption feasibility. | Retries, deduplication, ordering, stale state and a real caption-source test with the dashboard owner. | Implemented locally; external integration validation pending. |
+| 5 | Algorithmic passage/word ranking and quote candidates. | Source preservation, one exact blank, quality filters, repeats and reproducible fixture output. | Implemented locally; external integration validation pending. |
+| 6 | Conservative backend answer matcher. | Owner-reviewed typo/alias examples, short-word collisions, consistent outcomes and input preservation. | Implemented locally; external integration validation pending. |
+| 7 | Game lifecycle, private submissions, scoring and leaderboards. | Agreed rules, concurrent close/submit, retry-safe points, interim/final results. | Implemented locally; external integration validation pending. |
+| 8 | Live synchronization and frontend/deployment integration. | Reconnect/restart recovery, multiple viewers, real Twitch surfaces and actual device testing with teammates. | Implemented locally; external integration validation pending. |
 
-All new files live under `backend/`. No database, OAuth, caption collector, game endpoint, scoring engine or deployment is implemented by Step 1.
+All new files live under `backend/`. Those features were not implemented by Step 1; the current backend now implements persistence, OAuth, intake, algorithms, gameplay and synchronization. Browser caption collection, actual Twitch surfaces and public deployment remain external integration work.
 
 ## Live verification after every step
 
@@ -45,3 +45,7 @@ Gameplay decisions are recorded below and no longer require clarification. Remai
 - Correct answers receive 1 point; incorrect answers receive 0. No speed bonus. Ties share ranks.
 - Scores reset for each started game. Viewers may edit answers until the round closes.
 - Quote selection is automatic. Spelling tolerance and streamer-managed aliases provide equivalence; no runtime LLM is required.
+
+## November 2 extension of Step 3
+
+The owner asked to continue implementation while setup questions are answered. Incorporate Jia Yi’s dashboard OAuth requirements: verified Twitch profiles, encrypted refreshable authorizations, 24-hour opaque sessions, explicit owner-controlled moderator grants, current per-operation permission checks, and rich `/api/v1/auth/me` workspace JSON. The owner explicitly confirmed `question_review` may see unrevealed answers; `live_control` and `settings` may not. Preserve the original quote-game rules when reconciling PR #1. See frontend-handoff.md and pr-1-reconciliation.md.

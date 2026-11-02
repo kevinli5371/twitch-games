@@ -79,7 +79,7 @@ def build_examples() -> dict[str, Any]:
             "transcript": {"status": "receiving", "last_received_at": NOW},
             "candidates": [
                 {
-                    "question_id": "example-question",
+                    "question_id": "00000000-0000-4000-8000-000000000005",
                     "complete_quote": "I cannot believe we won with a spoon.",
                     "prompt": "I cannot believe we won with a ____.",
                     "canonical_answer": "spoon",
@@ -113,7 +113,7 @@ def build_examples() -> dict[str, Any]:
         },
         "open_round": {
             "request_id": REQUEST_ID,
-            "question_id": "example-question",
+            "question_id": "00000000-0000-4000-8000-000000000005",
             "expected_version": 0,
         },
         "game_command": {"request_id": REQUEST_ID, "expected_version": 1},

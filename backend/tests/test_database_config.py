@@ -27,9 +27,11 @@ def test_invalid_or_unencrypted_remote_connections_are_rejected(url):
 
 
 def test_database_url_is_secret_and_driver_is_normalized():
-    settings = Settings(database_url="postgres://user:secret@localhost/postgres")
+    settings = Settings(
+        database_url="postgres://user:database-password-sentinel@localhost/postgres"
+    )
     assert isinstance(settings.database_url, SecretStr)
-    assert "secret" not in settings.model_dump_json()
+    assert "database-password-sentinel" not in settings.model_dump_json()
     engine = create_database_engine(settings)
     try:
         assert engine.url.drivername == "postgresql+psycopg"

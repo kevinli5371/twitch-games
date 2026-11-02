@@ -1,0 +1,15 @@
+# PR #1 reconciliation
+
+Inspected PR #1 head `2a9e9dff00676609c33bd13dc97c41200d9c370f` on November 2, 2026. PR #1 contains a fixture dashboard and an independent, fail-closed backend foundation. The working `backend/quote-game` branch implements the owner-confirmed quote backend and has tested migrations in `twitch_games`.
+
+Do not merge both backend implementations unchanged. Keep one application factory, identity/permission authority, contract set and migration chain. PR #1's `app.py`, single-file `contracts.py`, `auth.py` seam and raw `game_private` migration overlap the running backend's modules and contracts. The dashboard assets can be integrated against the documented `/api/v1` API without replacing the verified backend with an unconfigured foundation.
+
+The adopted authorization model matches the intent of PR #1's Principal: verified user, selected workspace, owner status and three explicit app permissions. Permissions are re-read from PostgreSQL on protected operations; they are not trusted from browser flags or long-lived session claims. Owners alone mutate grants. The owner confirmed that question reviewers may see hidden answers; other permissions do not grant that access.
+
+Migration 0004 adds profiles, refreshable encrypted authorizations, independent dashboard sessions and moderator grants to the existing private schema. It preserves legacy encrypted sessions through up/down/up verification. Channel ownership is database-derived from the Twitch channel ID, never a browser-supplied owner field. No Supabase Auth system or browser-facing private-table grants are added. Do not separately apply PR #1's proposed schema as another source of truth.
+
+Preserve confirmed gameplay rules when resolving broader PR #1 differences: first release is quote-only, answers are editable until the 30-second deadline, selection is automatic, scores are 1/0 with shared ranks, and rounds advance manually. PR #1's immutable-final-submission helper, multi-mode bank planner, cooldowns and 3–5-question round planning are not approved replacements for those decisions. The fixture's review/create controls are not already-backed API features.
+
+OAuth API paths are `/api/v1/auth/twitch`, `/api/v1/auth/twitch/callback`, `/api/v1/auth/me`, `/api/v1/auth/logout`; `/api/v1/auth/session` is a compatibility alias for basic identity. This preserves the callback registered during backend setup. Production origin is still unselected. See `frontend-handoff.md` for permission mapping, cookie/CORS/CSRF requirements, examples and errors.
+
+This document is a concrete integration handoff, not a claim that PR #1 has been merged or the dashboard connected.

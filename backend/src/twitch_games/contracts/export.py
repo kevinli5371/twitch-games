@@ -196,13 +196,24 @@ def build_contract() -> dict[str, Any]:
     }
 
 
+def build_runtime_contract() -> dict[str, Any]:
+    from twitch_games.application import create_app
+    from twitch_games.config import Settings
+
+    return create_app(Settings(environment="test", _env_file=None)).openapi()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=Path("docs/openapi.planned.json"))
+    parser.add_argument("--runtime-output", type=Path, default=Path("docs/openapi.json"))
     parser.add_argument("--examples-output", type=Path, default=Path("docs/examples.json"))
     args = parser.parse_args()
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(build_contract(), indent=2) + "\n", encoding="utf-8")
+    args.runtime_output.write_text(
+        json.dumps(build_runtime_contract(), indent=2) + "\n", encoding="utf-8"
+    )
     args.examples_output.parent.mkdir(parents=True, exist_ok=True)
     args.examples_output.write_text(json.dumps(build_examples(), indent=2) + "\n", encoding="utf-8")
 

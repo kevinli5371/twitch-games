@@ -106,6 +106,7 @@ class LeaderboardEntry(Contract):
 
 class OwnParticipation(Contract):
     round_id: ResourceId
+    answer: AnswerText | None = None
     receipt: SubmissionReceipt | None
     result: PrivateRoundResult | None
 
@@ -194,7 +195,7 @@ class StartGame(Contract):
 
 class OpenRound(Contract):
     request_id: UUID
-    question_id: ResourceId
+    question_id: UUID | None = None
     expected_version: int = Field(ge=0)
 
 
@@ -214,6 +215,17 @@ class ErrorDetail(Contract):
         "request_conflict",
         "transcript_unavailable",
         "policy_unresolved",
+        "consent_denied",
+        "identity_required",
+        "not_configured",
+        "twitch_unavailable",
+        "database_unavailable",
+        "game_active",
+        "round_active",
+        "game_ended",
+        "unsupported_policy",
+        "stream_unavailable",
+        "payload_too_large",
     ]
     message: str
 

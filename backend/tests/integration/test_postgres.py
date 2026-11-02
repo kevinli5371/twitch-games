@@ -81,11 +81,12 @@ def seed(connection, channel="12345"):
         text("""
         INSERT INTO twitch_games.rounds
             (id,game_id,stream_id,channel_id,question_id,phase,version,prompt_snapshot,
-             canonical_answer_snapshot,accepted_aliases_snapshot,scoring_policy_id,policy_snapshot)
+             canonical_answer_snapshot,accepted_aliases_snapshot,scoring_policy_id,policy_snapshot,
+             complete_quote_snapshot)
         VALUES (:round,:game,:stream,:channel,:question,'prepared',0,:prompt,'spoon','[]',
-                'test-policy','{}')
+                'test-policy','{}',:quote)
     """),
-        {**ids, "channel": channel, "prompt": quote.replace("spoon", "____")},
+        {**ids, "channel": channel, "prompt": quote.replace("spoon", "____"), "quote": quote},
     )
     return {**ids, "channel": channel}
 
@@ -130,7 +131,7 @@ def test_current_migration_and_all_private_tables(database):
                 AND tablename <> 'alembic_version'
         """)
         ).all()
-        assert len(tables) == 11
+        assert len(tables) == 19
         assert all(rls for _, rls in tables)
 
 
@@ -337,7 +338,7 @@ def test_api_readiness_checks_real_postgres(database):
         response = client.get("/health/ready")
         assert response.status_code == 503  # Auth/gameplay still unimplemented.
         assert response.json()["dependencies"]["database"] == "ok"
-        assert response.json()["dependencies"]["twitch_auth"] == "not_implemented"
+        assert response.json()["dependencies"]["twitch_auth"] == "not_configured"
 
 
 def test_missing_migration_is_reported_without_automatic_ddl(database):

@@ -313,6 +313,20 @@
             "title": "Round Id",
             "type": "string"
           },
+          "answer": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Answer"
+          },
           "receipt": {
             "anyOf": [
               {
@@ -711,10 +725,17 @@
             "type": "string"
           },
           "question_id": {
-            "maxLength": 128,
-            "minLength": 1,
-            "title": "Question Id",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Question Id"
           },
           "expected_version": {
             "minimum": 0,
@@ -724,7 +745,6 @@
         },
         "required": [
           "request_id",
-          "question_id",
           "expected_version"
         ],
         "title": "OpenRound",
@@ -764,7 +784,18 @@
               "round_closed",
               "request_conflict",
               "transcript_unavailable",
-              "policy_unresolved"
+              "policy_unresolved",
+              "consent_denied",
+              "identity_required",
+              "not_configured",
+              "twitch_unavailable",
+              "database_unavailable",
+              "game_active",
+              "round_active",
+              "game_ended",
+              "unsupported_policy",
+              "stream_unavailable",
+              "payload_too_large"
             ],
             "title": "Code",
             "type": "string"

@@ -14,11 +14,12 @@ def test_liveness_and_truthful_readiness():
         assert ready.status_code == 503
         assert ready.json() == {
             "status": "not_ready",
-            "stage": "persistence",
+            "stage": "gameplay",
             "dependencies": {
                 "database": "not_configured",
-                "twitch_auth": "not_implemented",
-                "gameplay": "not_implemented",
+                "twitch_auth": "not_configured",
+                "gameplay": "implemented",
+                "notifications": "not_configured",
             },
         }
 
@@ -27,11 +28,11 @@ def test_runtime_docs_only_advertise_implemented_health_routes():
     with TestClient(create_app(Settings())) as client:
         assert client.get("/docs").status_code == 200
         schema = client.get("/openapi.json").json()
-        assert set(schema["paths"]) == {"/health/live", "/health/ready"}
+        assert {"/health/live", "/health/ready", "/api/v1/auth/twitch"} <= set(schema["paths"])
         assert "503" in schema["paths"]["/health/ready"]["get"]["responses"]
-        assert "200" not in schema["paths"]["/health/ready"]["get"]["responses"]
-        assert client.get("/api/v1/channels/12345/game-state").status_code == 404
-        assert client.post("/api/v1/rounds/example-round/answers", json={}).status_code == 404
+        assert "200" in schema["paths"]["/health/ready"]["get"]["responses"]
+        assert client.get("/api/v1/channels/12345/game-state").status_code == 401
+        assert client.post("/api/v1/rounds/example-round/answers", json={}).status_code == 422
 
 
 def test_production_docs_are_disabled():

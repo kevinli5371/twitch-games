@@ -102,7 +102,7 @@
     },
     "candidates": [
       {
-        "question_id": "example-question",
+        "question_id": "00000000-0000-4000-8000-000000000005",
         "complete_quote": "I cannot believe we won with a spoon.",
         "prompt": "I cannot believe we won with a ____.",
         "canonical_answer": "spoon",
@@ -154,7 +154,7 @@
   },
   "open_round": {
     "request_id": "11111111-1111-4111-8111-111111111111",
-    "question_id": "example-question",
+    "question_id": "00000000-0000-4000-8000-000000000005",
     "expected_version": 0
   },
   "game_command": {

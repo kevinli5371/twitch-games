@@ -1,10 +1,14 @@
 import os
+import sys
+from pathlib import Path
 
 import pytest
 from sqlalchemy.engine import make_url
 
 from twitch_games.config import Settings
 from twitch_games.database import Database
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 
 # Capture before the foundation's per-test environment isolation runs.
 TEST_DATABASE_URL = os.environ.get("TWITCH_GAMES_TEST_DATABASE_URL")

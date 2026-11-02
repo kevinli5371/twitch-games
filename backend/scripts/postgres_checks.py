@@ -6,6 +6,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from uuid import uuid4
 
 import psycopg
@@ -17,14 +18,15 @@ IMAGE = "postgres:17@sha256:3b0cda93be7c8dba2ed484d19393d93845dc3dafb88973e248ba
 
 def main() -> None:
     name = f"twitch-games-pgtest-{uuid4().hex[:10]}"
-    environment = os.environ.copy()
+    isolated_cwd = TemporaryDirectory(prefix="twitch-games-pgchecks-")
+    environment = {k: v for k, v in os.environ.items() if not k.startswith("TWITCH_GAMES_")}
     environment["POSTGRES_PASSWORD"] = secrets.token_urlsafe(24)
     started = False
 
     def run(*command: str, capture: bool = False):
         return subprocess.run(
-            command,
-            cwd=ROOT,
+            [str(ROOT / part) if part.startswith("scripts/") else part for part in command],
+            cwd=ROOT if "pytest" in command else isolated_cwd.name,
             env=environment,
             check=True,
             text=True,
@@ -32,7 +34,7 @@ def main() -> None:
         )
 
     def alembic(*arguments: str) -> None:
-        run(sys.executable, "-m", "alembic", "-c", "alembic.ini", *arguments)
+        run(sys.executable, "-m", "alembic", "-c", str(ROOT / "alembic.ini"), *arguments)
 
     try:
         run(
@@ -98,9 +100,44 @@ def main() -> None:
             connection.execute("CREATE ROLE authenticated NOLOGIN NOSUPERUSER NOBYPASSRLS")
             version = connection.execute("SHOW server_version").fetchone()[0]
         print(f"Live isolated PostgreSQL {version}; credentials not logged.", flush=True)
+        alembic("upgrade", "0003_round_snapshots")
+        with psycopg.connect(dsn) as c:
+            c.execute("INSERT INTO twitch_games.channels(id) VALUES ('998877665544')")
+            c.execute(
+                "INSERT INTO twitch_games.dashboard_sessions "
+                "(digest,channel_id,encrypted_token,expires_at,validated_at) "
+                "VALUES (%s,'998877665544','legacy-protected-fixture',"
+                "now()+interval '1 hour',now())",
+                ("f" * 64,),
+            )
         alembic("upgrade", "head")
+        with psycopg.connect(dsn) as c:
+            assert (
+                c.execute(
+                    "SELECT user_id FROM twitch_games.dashboard_sessions WHERE digest=%s",
+                    ("f" * 64,),
+                ).fetchone()[0]
+                == "998877665544"
+            )
+        alembic("downgrade", "0003_round_snapshots")
+        with psycopg.connect(dsn) as c:
+            assert (
+                c.execute(
+                    "SELECT encrypted_token FROM twitch_games.dashboard_sessions WHERE digest=%s",
+                    ("f" * 64,),
+                ).fetchone()[0]
+                == "legacy-protected-fixture"
+            )
+        alembic("upgrade", "head")
+        with psycopg.connect(dsn) as c:
+            c.execute("DELETE FROM twitch_games.dashboard_sessions WHERE user_id='998877665544'")
+            c.execute("DELETE FROM twitch_games.oauth_authorizations WHERE user_id='998877665544'")
+            c.execute("DELETE FROM twitch_games.channels WHERE id='998877665544'")
+            c.execute("DELETE FROM twitch_games.twitch_users WHERE id='998877665544'")
+        print("Legacy OAuth session migration up/down/up preserved protected data.", flush=True)
         alembic("upgrade", "head")  # Repeatable application does not recreate data.
-        run(sys.executable, "-m", "pytest", "-q", "-W", "error")
+        run(sys.executable, "-m", "pytest", "-q", "--tb=short", "-W", "error")
+        run(sys.executable, "scripts/live_game_checks.py")
         run(sys.executable, "scripts/smoke_test.py", "--database-status", "ok")
         bad_url = url.set(database="missing_database_test").render_as_string(hide_password=False)
         environment["TWITCH_GAMES_DATABASE_URL"] = bad_url
@@ -121,6 +158,7 @@ def main() -> None:
             "Migration up/repeat/down/up, live database tests and HTTP checks passed.", flush=True
         )
     finally:
+        isolated_cwd.cleanup()
         if started:
             subprocess.run(
                 ["docker", "rm", "--force", "--volumes", name],
