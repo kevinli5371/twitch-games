@@ -11,6 +11,10 @@
 - Actual Twitch Application credentials were verified using a client-credentials token and `/validate`; public Helix user lookup succeeded. Actual Extension signing credentials plus the configured creator's numeric ID were accepted by the read-only `/extensions/jwt/secrets` endpoint (HTTP 200). Returned key material was not logged.
 - The production-mode Docker image was built for Linux arm64 and probed over loopback HTTP: live 200, incomplete-config ready 503, docs 404, unauthenticated game state 401. Runtime UID is 10001 and `.env` is absent from the image. See the image-check script for repeatable checks.
 
+- A real browser Twitch authorization-code flow completed successfully against the configured Application. The backend callback created a Supabase session and redirected to the configured dashboard destination. Authenticated `/api/v1/auth/me` returned the verified account, owned channel and owner permissions; access to a different ungranted workspace returned `forbidden`.
+- A real Twitch refresh-token exchange and subsequent new-access-token validation succeeded through the implemented refresh path. The first expired-access validation result was forced locally to exercise that path; token exchange and identity validation used Twitch production. Updated tokens remained encrypted in Supabase, and the same authenticated browser session remained valid.
+- The local dashboard preview on port 4173 was not running during the login check. Its connection-refused page occurred after the backend's successful callback, not instead of that callback.
+
 ## Commands
 
 Run from `backend/`:
@@ -29,6 +33,6 @@ Real-server checks isolate their working directory and configuration from the de
 
 ## Limits
 
-The real Twitch browser consent/callback, viewer-issued Extension JWT, PubSub reception on an installed Extension, live caption availability, frontend integration and desktop/iOS/Android behavior have not been established by provider fixtures or credential checks. The frontend owners must supply working surfaces and a caption-enabled test stream for those observations. No universal transcript or fallback audio-capture implementation is claimed.
+The real Twitch browser consent/callback and refresh exchange are observed above. Viewer-issued Extension JWTs, PubSub reception on an installed Extension, live caption availability, frontend integration and desktop/iOS/Android behavior remain unverified. Actual OAuth revocation was tested with the HTTP fixture, not by disconnecting the user’s real Twitch integration. The frontend owners must supply working surfaces and a caption-enabled test stream for those observations. No universal transcript or fallback audio-capture implementation is claimed.
 
 Production hosting/domain, callback/CORS values and real HTTPS cookie behavior remain deployment integration work. The image is packaged locally; no public deployment is claimed. Readiness verifies the database revision and configuration, not a complete Twitch experience.

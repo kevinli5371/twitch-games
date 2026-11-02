@@ -27,6 +27,8 @@ Artificial owner response:
 
 A moderator receives their own verified user and owned channel, plus explicitly granted workspaces. Their selected workspace role is `moderator` with current granted permissions. Logging in or having a Twitch moderator badge alone does not grant another workspace.
 
+If login ends at port 4173 with a connection-refused page, check that the dashboard preview is running. The backend may already have completed its callback and created the session. Visit `/auth/me` on the API in that same browser to verify. Keep the registered callback on port 8000; port 4173 is the subsequent dashboard destination.
+
 ## Moderator administration and data boundaries
 
 | Operation | Required authority |
