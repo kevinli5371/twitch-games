@@ -1,0 +1,189 @@
+{
+  "public_idle": {
+    "channel_id": "12345",
+    "game_id": null,
+    "status": "idle",
+    "version": 0,
+    "server_time": "2026-11-01T18:00:00Z",
+    "round": null
+  },
+  "public_answering": {
+    "channel_id": "12345",
+    "game_id": "example-game",
+    "status": "active",
+    "version": 1,
+    "server_time": "2026-11-01T18:00:00Z",
+    "round": {
+      "round_id": "example-round",
+      "phase": "answering",
+      "prompt": "I cannot believe we won with a ____.",
+      "opened_at": "2026-11-01T18:00:00Z",
+      "closes_at": null
+    }
+  },
+  "public_results": {
+    "channel_id": "12345",
+    "game_id": "example-game",
+    "status": "active",
+    "version": 2,
+    "server_time": "2026-11-01T18:00:00Z",
+    "round": {
+      "round_id": "example-round",
+      "phase": "results",
+      "prompt": "I cannot believe we won with a ____.",
+      "complete_quote": "I cannot believe we won with a spoon.",
+      "canonical_answer": "spoon"
+    }
+  },
+  "submission_request": {
+    "request_id": "11111111-1111-4111-8111-111111111111",
+    "answer": "spoonn"
+  },
+  "submission_receipt": {
+    "submission_id": "example-submission",
+    "round_id": "example-round",
+    "request_id": "11111111-1111-4111-8111-111111111111",
+    "status": "received",
+    "received_at": "2026-11-01T18:00:00Z"
+  },
+  "own_pending": {
+    "round_id": "example-round",
+    "receipt": {
+      "submission_id": "example-submission",
+      "round_id": "example-round",
+      "request_id": "11111111-1111-4111-8111-111111111111",
+      "status": "received",
+      "received_at": "2026-11-01T18:00:00Z"
+    },
+    "result": null
+  },
+  "own_result": {
+    "round_id": "example-round",
+    "receipt": {
+      "submission_id": "example-submission",
+      "round_id": "example-round",
+      "request_id": "11111111-1111-4111-8111-111111111111",
+      "status": "received",
+      "received_at": "2026-11-01T18:00:00Z"
+    },
+    "result": {
+      "round_id": "example-round",
+      "submission_id": "example-submission",
+      "outcome": "correct",
+      "awarded_points": 1,
+      "scoring_policy_id": "example-policy-not-a-default"
+    }
+  },
+  "leaderboard": {
+    "game_id": "example-game",
+    "version": 2,
+    "final": false,
+    "entries": [
+      {
+        "participant_id": "example-player",
+        "display_name": "ExampleViewer",
+        "rank": 1,
+        "points": 1
+      }
+    ],
+    "own_entry": {
+      "participant_id": "example-player",
+      "display_name": "ExampleViewer",
+      "rank": 1,
+      "points": 1
+    }
+  },
+  "dashboard": {
+    "channel_id": "12345",
+    "stream_id": "example-stream",
+    "transcript": {
+      "status": "receiving",
+      "last_received_at": "2026-11-01T18:00:00Z"
+    },
+    "candidates": [
+      {
+        "question_id": "example-question",
+        "complete_quote": "I cannot believe we won with a spoon.",
+        "prompt": "I cannot believe we won with a ____.",
+        "canonical_answer": "spoon",
+        "accepted_aliases": [],
+        "source": {
+          "stream_id": "example-stream",
+          "segment_ids": [
+            "example-segment"
+          ],
+          "received_at": "2026-11-01T18:00:00Z"
+        }
+      }
+    ],
+    "game": {
+      "channel_id": "12345",
+      "game_id": "example-game",
+      "status": "active",
+      "version": 1,
+      "server_time": "2026-11-01T18:00:00Z",
+      "round": {
+        "round_id": "example-round",
+        "phase": "answering",
+        "prompt": "I cannot believe we won with a ____.",
+        "opened_at": "2026-11-01T18:00:00Z",
+        "closes_at": null
+      }
+    },
+    "submission_count": 1
+  },
+  "transcript_batch": {
+    "batch_id": "11111111-1111-4111-8111-111111111111",
+    "source": "twitch_player_captions",
+    "segments": [
+      {
+        "sequence": 0,
+        "text": "I cannot believe we won with a spoon.",
+        "observed_at": "2026-11-01T18:00:00Z"
+      }
+    ]
+  },
+  "batch_receipt": {
+    "batch_id": "11111111-1111-4111-8111-111111111111",
+    "status": "received"
+  },
+  "start_game": {
+    "request_id": "11111111-1111-4111-8111-111111111111",
+    "mode": "quote",
+    "policy_id": "example-policy-not-a-default"
+  },
+  "open_round": {
+    "request_id": "11111111-1111-4111-8111-111111111111",
+    "question_id": "example-question",
+    "expected_version": 0
+  },
+  "game_command": {
+    "request_id": "11111111-1111-4111-8111-111111111111",
+    "expected_version": 1
+  },
+  "error": {
+    "error": {
+      "code": "round_closed",
+      "message": "This round is closed."
+    }
+  },
+  "state_changed": {
+    "event": "game_state_changed",
+    "channel_id": "12345",
+    "version": 1,
+    "state": {
+      "channel_id": "12345",
+      "game_id": "example-game",
+      "status": "active",
+      "version": 1,
+      "server_time": "2026-11-01T18:00:00Z",
+      "round": {
+        "round_id": "example-round",
+        "phase": "answering",
+        "prompt": "I cannot believe we won with a ____.",
+        "opened_at": "2026-11-01T18:00:00Z",
+        "closes_at": null
+      }
+    }
+  }
+}
