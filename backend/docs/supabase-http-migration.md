@@ -64,3 +64,7 @@ TWITCH_GAMES_SUPABASE_SECRET_KEY=YOUR_SERVER_SECRET_KEY
 No public key or changed Twitch/encryption credentials are needed.
 
 References: [Supabase Data API](https://supabase.com/docs/guides/api), [database functions](https://supabase.com/docs/guides/database/functions), [PostgREST transactions](https://docs.postgrest.org/en/stable/references/transactions.html).
+
+## Subsequent browser verification
+
+Real Twitch sign-in, sign-out and sign-in again passed against the active hosted HTTPS backend. Complete browser games passed separately against disposable PostgreSQL and real PostgREST, with synthetic Twitch transport and notice-driven updates. No synthetic hosted game or live Twitch broadcast result is claimed. See [offline E2E evidence](e2e-without-stream.md).

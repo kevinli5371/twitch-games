@@ -17,6 +17,7 @@ function signedOut() {
   $('live-signed-out').hidden = false; $('live-signed-in').hidden = true;
   document.querySelector('.channel strong').textContent = 'Not signed in';
   document.querySelector('.channel small').textContent = 'Connect in Live game';
+  document.querySelector('.sidebar-bottom p').textContent = 'Sign in to access your workspace.';
 }
 function renderIdentity(identity) {
   $('live-signed-out').hidden = true; $('live-signed-in').hidden = false;

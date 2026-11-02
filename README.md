@@ -18,7 +18,7 @@ The original in-memory visual simulator remains at `/preview.html`; `viewer.html
 
 ## Observed verification and limits
 
-144 Python tests plus 10 subtests and 16 Node tests pass. All 24 backend operations have successful real HTTP cases. The actual JavaScript clients also complete a real API/database round, and browser testing verified two viewers, private answers/edits, the 30-second close, backend scores, final standings and reconnect. Twitch/caption inputs in that repeatable flow are explicitly synthetic. See [evidence and setup](docs/fullstack-integration.md).
+151 Python tests plus 10 subtests and 16 Node tests pass. All 24 backend operations have successful real HTTP cases. The actual JavaScript clients also complete a real API/database round, and browser testing verified two viewers, private answers/edits, the 30-second close, backend scores, final standings and reconnect. Twitch/caption inputs in that repeatable flow are explicitly synthetic. See [evidence and setup](docs/fullstack-integration.md).
 
 The owner selected Supabase HTTPS project URL + server secret to avoid the unreachable IPv6 direct endpoint. The HTTP storage adapter passes local real-PostgREST checks and the actual hosted gateway accepts the key. The tested migration is installed and the local API now runs through Supabase HTTPS with successful readiness, session restoration and a removable hosted write probe; see [HTTP storage setup](backend/docs/supabase-http-migration.md). Real caption-enabled broadcast, installed Extension/PubSub, physical devices and public deployment remain unverified.
 
