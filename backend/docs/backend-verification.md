@@ -15,6 +15,8 @@
 - A real Twitch refresh-token exchange and subsequent new-access-token validation succeeded through the implemented refresh path. The first expired-access validation result was forced locally to exercise that path; token exchange and identity validation used Twitch production. Updated tokens remained encrypted in Supabase, and the same authenticated browser session remained valid.
 - The local dashboard preview on port 4173 was not running during the login check. Its connection-refused page occurred after the backend's successful callback, not instead of that callback.
 
+All 24 documented runtime API operations had successful real HTTP cases. The live check now fails when a documented operation is unexercised. See [endpoint-test-coverage.md](endpoint-test-coverage.md) for the observed method/path/status matrix.
+
 ## Commands
 
 Run from `backend/`:

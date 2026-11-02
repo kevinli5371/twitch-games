@@ -21,6 +21,7 @@ import httpx2 as httpx
 import jwt
 from cryptography.fernet import Fernet
 from sqlalchemy.engine import make_url
+from starlette.routing import compile_path
 from support.twitch_fixture import twitch_fixture
 
 from twitch_games.config import Settings
@@ -29,6 +30,51 @@ from twitch_games.store import run
 
 ROOT = Path(__file__).resolve().parents[1]
 KEY = b"integration-only-extension-key-32bytes!"
+
+
+class EndpointCoverage:
+    """Fail the live check if any documented operation lacks a successful response."""
+
+    def __init__(self):
+        self.routes = []
+        self.seen = {}
+
+    def configure(self, schema):
+        for path, operations in schema["paths"].items():
+            for method in operations:
+                if method.lower() in {"get", "post", "put", "delete", "patch", "head", "options"}:
+                    key = (method.upper(), path)
+                    self.routes.append((key, compile_path(path)[0]))
+                    self.seen[key] = set()
+
+    def observe(self, response):
+        for key, pattern in self.routes:
+            if response.request.method == key[0] and pattern.fullmatch(response.request.url.path):
+                self.seen[key].add(response.status_code)
+
+    def verify(self):
+        missing = [
+            f"{method} {path}"
+            for (method, path), statuses in self.seen.items()
+            if not any(200 <= status < 400 for status in statuses)
+        ]
+        assert self.routes, "Runtime OpenAPI must declare the expected API operations"
+        assert not missing, "Missing successful real HTTP endpoint cases: " + ", ".join(missing)
+        report = {
+            "scope": "Real local Uvicorn/PostgreSQL; Twitch HTTP fixture; no frontend/device E2E",
+            "operation_count": len(self.routes),
+            "operations": [
+                {"method": method, "path": path, "statuses": sorted(statuses)}
+                for (method, path), statuses in sorted(self.seen.items())
+            ],
+        }
+        target = ROOT / ".cache/endpoint-coverage.json"
+        target.parent.mkdir(exist_ok=True)
+        target.write_text(json.dumps(report, indent=2) + "\n")
+        print(
+            f"All {len(self.routes)} documented API operations had successful real HTTP cases.",
+            flush=True,
+        )
 
 
 def main():
@@ -123,10 +169,17 @@ def main():
 
         try:
             process = start_server()
+            coverage = EndpointCoverage()
+            hooks = {"response": [coverage.observe]}
             with (
-                httpx.Client(base_url=base, timeout=10, follow_redirects=False) as owner,
-                httpx.Client(base_url=base, timeout=10) as viewer,
+                httpx.Client(
+                    base_url=base, timeout=10, follow_redirects=False, event_hooks=hooks
+                ) as owner,
+                httpx.Client(base_url=base, timeout=10, event_hooks=hooks) as viewer,
             ):
+                schema = checked(viewer, "GET", "/openapi.json", 200)
+                coverage.configure(schema)
+                checked(viewer, "GET", "/health/live", 200)
                 checked(viewer, "GET", "/health/ready", 200)
                 checked(viewer, "GET", f"/api/v1/channels/{channel}/game-state", 401)
                 login = owner.get("/api/v1/auth/twitch")
@@ -158,7 +211,9 @@ def main():
                 path = f"/api/v1/streams/{stream}/transcript-batches"
                 assert checked(owner, "POST", path, 202, json=batch)["status"] == "received"
                 assert checked(owner, "POST", path, 202, json=batch)["status"] == "duplicate"
-                moderator = httpx.Client(base_url=base, timeout=10, follow_redirects=False)
+                moderator = httpx.Client(
+                    base_url=base, timeout=10, follow_redirects=False, event_hooks=hooks
+                )
                 try:
                     mod_user = channel + "3"
                     mod_login = moderator.get("/api/v1/auth/twitch")
@@ -180,6 +235,15 @@ def main():
                         200,
                         json={"login": "user" + mod_user, "permissions": ["live_control"]},
                     )
+                    grants = checked(owner, "GET", f"/api/v1/channels/{channel}/moderators", 200)
+                    assert grants == [
+                        {
+                            "user_id": mod_user,
+                            "login": "user" + mod_user,
+                            "display_name": "Viewer" + mod_user,
+                            "permissions": ["live_control"],
+                        }
+                    ]
                     assert (
                         checked(moderator, "GET", f"/api/v1/dashboard/channels/{channel}", 200)[
                             "candidates"
@@ -226,6 +290,10 @@ def main():
                     200,
                     json={"canonical": canonical, "aliases": ["fixture alias"]},
                 )
+                aliases = checked(owner, "GET", f"/api/v1/channels/{channel}/aliases", 200)
+                assert aliases == [
+                    {"canonical": canonical.casefold(), "aliases": ["fixture alias"]}
+                ]
                 started = checked(
                     owner,
                     "POST",
@@ -363,6 +431,25 @@ def main():
                     "30-second closure, scoring, late rejection and shared ranks passed.",
                     flush=True,
                 )
+                close_command = {"request_id": str(uuid4()), "expected_version": results["version"]}
+                results = checked(
+                    owner, "POST", f"/api/v1/rounds/{round_id}/close", 202, json=close_command
+                )
+                assert results["round"]["phase"] == "results"
+                assert (
+                    checked(
+                        owner, "POST", f"/api/v1/rounds/{round_id}/close", 202, json=close_command
+                    )
+                    == results
+                )
+                after_close = checked(
+                    viewer,
+                    "GET",
+                    f"/api/v1/games/{started['game_id']}/leaderboard",
+                    200,
+                    headers=first,
+                )
+                assert after_close["entries"] == leaderboard["entries"]
                 ended = checked(
                     owner,
                     "POST",
@@ -416,6 +503,9 @@ def main():
                     "Final standings, reset, notification privacy and body limits passed.",
                     flush=True,
                 )
+                checked(owner, "POST", "/api/v1/auth/logout", 204)
+                checked(owner, "GET", "/api/v1/auth/me", 401)
+                coverage.verify()
                 print(
                     "Verified real local HTTP/PostgreSQL; Twitch uses an HTTP fixture.",
                     flush=True,
