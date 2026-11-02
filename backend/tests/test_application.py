@@ -14,9 +14,9 @@ def test_liveness_and_truthful_readiness():
         assert ready.status_code == 503
         assert ready.json() == {
             "status": "not_ready",
-            "stage": "foundation",
+            "stage": "persistence",
             "dependencies": {
-                "database": "not_implemented",
+                "database": "not_configured",
                 "twitch_auth": "not_implemented",
                 "gameplay": "not_implemented",
             },

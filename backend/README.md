@@ -2,15 +2,15 @@
 
 Python + FastAPI backend for the quote-completion Twitch Extension. Supabase PostgreSQL is the selected database. All new backend code, configuration, tests, generated contracts and documentation live in this directory.
 
-## Current status — Step 1 foundation
+## Current status — persistence foundation
 
 Implemented: application factory, validated environment settings, explicit-origin CORS configuration, liveness/readiness endpoints, public/private/dashboard Pydantic contracts, artificial frontend fixtures, a planned OpenAPI handoff, and automated tests.
 
-**Not implemented:** database connection/migrations, Twitch OAuth or Extension authentication, caption capture/intake, quote selection, answer matching, scoring, game routes, live messaging, or deployment. No live Twitch/Supabase integration or mobile-device behavior has been verified.
+**Persistence implemented and tested:** PostgreSQL connection/transactions, private-schema migrations, database constraints and live readiness. See [Step 2 verification](docs/step-2-verification.md). Hosted Supabase needs a configured connection URI. Twitch auth, intake, matching, gameplay, live messaging and deployment remain later work.
 
-The runtime deliberately returns **503 from readiness**, because the game dependencies do not exist yet. Liveness returns 200 when the foundation process is running. Game routes return 404 rather than fake successful responses.
+The runtime returns **503 from overall readiness** while authentication/gameplay remain unfinished; its database field reports the actual configured connection and migration state. Liveness returns 200 when the foundation process is running. Game routes return 404 rather than fake successful responses.
 
-The [implementation plan](docs/implementation-plan.md) records the owner's step-by-step approval requirement. Step 2 must wait for a new green light.
+The [implementation plan](docs/implementation-plan.md) records the owner's updated instruction: build the full backend with automatic verification between stages; pause only for necessary input or external configuration.
 
 Each step also requires agent-run real-server and relevant live integration checks wherever feasible, with commands/results documented separately from unit tests. The owner should not need to manually repeat checks that can be automated. Missing external credentials or test resources must be disclosed explicitly.
 
@@ -39,7 +39,7 @@ python3 -m venv .venv
 
 Python 3.12–3.14 is declared supported by the project metadata. The checked dependency snapshot and verification report state which interpreter was actually tested; other versions/platforms are not implicitly verified. `requirements-dev.lock` pins the tested application/test dependency set. Build tooling follows the range in `pyproject.toml`.
 
-Optionally copy `.env.example` to `.env`. No credentials are needed for Step 1. Do not add Twitch, Supabase, database or model credentials to fixtures, Git, or viewer code.
+Optionally copy `.env.example` to `.env`. Database connectivity requires the PostgreSQL URI described below; omitting it keeps liveness available and reports the database as not configured. Do not add Twitch, Supabase, database or model credentials to fixtures, Git, or viewer code.
 
 ```sh
 .venv/bin/python -m uvicorn twitch_games.main:app --host 127.0.0.1 --port 8000
@@ -48,7 +48,7 @@ Optionally copy `.env.example` to `.env`. No credentials are needed for Step 1. 
 Local URLs:
 
 - `http://127.0.0.1:8000/health/live` — process liveness, HTTP 200.
-- `http://127.0.0.1:8000/health/ready` — honest dependency readiness, HTTP 503 in Step 1.
+- `http://127.0.0.1:8000/health/ready` — honest dependency readiness, HTTP 503 until all required integrations are ready.
 - `http://127.0.0.1:8000/docs` — interactive documentation of **implemented health routes only**.
 - `http://127.0.0.1:8000/openapi.json` — runtime OpenAPI, not the planned game API.
 
@@ -64,7 +64,30 @@ Settings are read from process environment and then `.env` in the current workin
 
 Example local origin: `["http://localhost:5173"]`. CORS is not authentication. Wildcards, credentials embedded in URLs, paths, queries and fragments are rejected. Production settings require docs disabled and explicit HTTPS origins. This is configuration validation, not a claim that the unfinished application is production-ready.
 
-Supabase/Auth settings are intentionally deferred to their approved steps, rather than accepting unused credentials now.
+## Database configuration and migrations
+
+Set `TWITCH_GAMES_DATABASE_URL` in `.env` to a PostgreSQL URI. Remote URIs must explicitly use `sslmode=require`, `verify-ca` or `verify-full`. Direct/session-pooler URIs work for migrations; transaction-pooler prepared statements are disabled by the driver configuration. `TWITCH_GAMES_DATABASE_CONNECT_TIMEOUT_SECONDS` defaults to 3, and `TWITCH_GAMES_DATABASE_POOL_SIZE` defaults to 5 with no overflow. Database URLs are secret settings and are not returned by health checks.
+
+```sh
+.venv/bin/alembic upgrade head
+.venv/bin/python scripts/check_supabase.py
+```
+
+The API never creates/migrates the database automatically. The migration CLI refuses an unmanaged nonempty application schema. All business tables are in private `twitch_games`, not `public`, with no direct client policies. Keep database credentials on the server; OAuth/JWT channel authorization is still required at the API layer.
+
+Hosted connection checks are read-only by default. To apply this app's schema and verify a temporary rolled-back insert after isolated Docker validation:
+
+```sh
+.venv/bin/python scripts/check_supabase.py --apply-migrations --exercise-writes
+```
+
+Never run the integration test suite or migration downgrades against the hosted project. The Docker script creates and removes its own disposable loopback-only database:
+
+```sh
+.venv/bin/python scripts/postgres_checks.py
+```
+
+This runs the real PostgreSQL tests plus real server HTTP probes through all database readiness states. The standalone smoke script also accepts `--database-status ok` for an explicitly configured, migrated connection. No Docker database is required for production; Supabase is the hosted target.
 
 ## Frontend handoff
 
@@ -92,6 +115,8 @@ The test suite covers configuration failure, health truthfulness, CORS origin bo
 
 The smoke test starts and stops a real Uvicorn process bound only to `127.0.0.1`, using an ephemeral port and isolated test configuration. It needs local socket permission and makes no calls to Twitch or Supabase.
 
-## Open product decisions
+## Confirmed gameplay and remaining setup
 
-Do not assign defaults for point values/speed weighting, round duration/progression, answer revisions, game/stream score resets, question approval, synonym rules, or transcript fallback. These are explicitly unresolved. A required `policy_id` in the draft start-game contract references a future agreed policy; no policies exist yet. The example score of 1 and `closes_at: null` are fixture data, not adopted gameplay rules.
+The owner selected manual round starts, automatic 30-second closure, manual advancement, 1 point for correct/0 for incorrect, no speed bonus, shared tie ranks, per-game score reset, and editable answers until closure. Quotes are automatically selected, with spelling tolerance and streamer-managed aliases. These rules will be implemented in the subsequent game stages; existing fixtures are still artificial and do not constitute working gameplay.
+
+Remaining external setup includes the hosted database URI, Twitch OAuth/Extension credentials, a captioned test channel and deployment configuration. Caption fallback and retention remain to be resolved if needed.

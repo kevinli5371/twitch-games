@@ -12,6 +12,9 @@ dependencies = [
   "pydantic>=2.10,<3",
   "pydantic-settings>=2.7,<3",
   "uvicorn>=0.34,<1",
+  "sqlalchemy>=2.0.40,<2.1",
+  "psycopg[binary]>=3.2,<4",
+  "alembic>=1.15,<2",
 ]
 
 [project.optional-dependencies]
@@ -23,6 +26,7 @@ packages = ["src/twitch_games"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
+markers = ["integration: requires an explicitly configured disposable PostgreSQL database"]
 
 [tool.ruff]
 target-version = "py312"

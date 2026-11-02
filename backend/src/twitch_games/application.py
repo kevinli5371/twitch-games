@@ -1,5 +1,6 @@
 """Application factory: only truthful foundation routes are mounted in Step 1."""
 
+from contextlib import asynccontextmanager
 from typing import Literal
 
 from fastapi import FastAPI, Response
@@ -9,6 +10,7 @@ from pydantic import BaseModel, ConfigDict
 
 from twitch_games import __version__
 from twitch_games.config import Settings
+from twitch_games.database import Database, DatabaseStatus
 
 
 class Liveness(BaseModel):
@@ -19,30 +21,42 @@ class Liveness(BaseModel):
     version: str = __version__
 
 
-class FoundationDependencies(BaseModel):
-    database: Literal["not_implemented"] = "not_implemented"
+class PersistenceDependencies(BaseModel):
+    database: DatabaseStatus
     twitch_auth: Literal["not_implemented"] = "not_implemented"
     gameplay: Literal["not_implemented"] = "not_implemented"
 
 
 class Readiness(BaseModel):
     status: Literal["not_ready"] = "not_ready"
-    stage: Literal["foundation"] = "foundation"
-    dependencies: FoundationDependencies = FoundationDependencies()
+    stage: Literal["persistence"] = "persistence"
+    dependencies: PersistenceDependencies
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings if settings is not None else Settings()
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        database = Database(settings) if settings.database_url is not None else None
+        app.state.database = database
+        try:
+            yield
+        finally:
+            if database is not None:
+                database.close()
+
     app = FastAPI(
         title="Twitch Games Backend",
         version=__version__,
         description=(
-            "Step 1 foundation only. Game, authentication and database routes are not implemented. "
+            "Step 2 persistence foundation. Authentication and game routes are not implemented. "
             "The separate contract under backend/docs is a frontend handoff, not a live API."
         ),
         docs_url="/docs" if settings.docs_enabled else None,
         redoc_url=None,
         openapi_url="/openapi.json" if settings.docs_enabled else None,
+        lifespan=lifespan,
     )
     app.state.settings = settings
     if settings.cors_origins:
@@ -67,9 +81,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         tags=["health"],
     )
     def readiness() -> JSONResponse:
+        database = app.state.database
+        database_status = database.status() if database is not None else "not_configured"
         return JSONResponse(
             status_code=503,
-            content=Readiness().model_dump(mode="json"),
+            content=Readiness(
+                dependencies=PersistenceDependencies(database=database_status)
+            ).model_dump(mode="json"),
             headers={"Cache-Control": "no-store"},
         )
 
