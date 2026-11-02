@@ -1,0 +1,1457 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Twitch Games \u2014 PLANNED gameplay API",
+    "version": "0.1.0-draft",
+    "description": "Frontend design handoff only. None of these game endpoints are mounted in Step 1. Runtime OpenAPI lists only health endpoints. Numeric example values do not establish scoring defaults. Authorization is implemented in Step 3."
+  },
+  "x-implementation-status": "planned",
+  "x-public-event-schema": {
+    "$ref": "#/components/schemas/StateChanged"
+  },
+  "components": {
+    "schemas": {
+      "HiddenRound": {
+        "additionalProperties": false,
+        "properties": {
+          "round_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Round Id",
+            "type": "string"
+          },
+          "phase": {
+            "enum": [
+              "prepared",
+              "answering",
+              "closed",
+              "scoring",
+              "cancelled"
+            ],
+            "title": "Phase",
+            "type": "string"
+          },
+          "prompt": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Prompt",
+            "type": "string"
+          },
+          "opened_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opened At"
+          },
+          "closes_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closes At"
+          }
+        },
+        "required": [
+          "round_id",
+          "phase",
+          "prompt",
+          "opened_at",
+          "closes_at"
+        ],
+        "title": "HiddenRound",
+        "type": "object"
+      },
+      "RevealedRound": {
+        "additionalProperties": false,
+        "properties": {
+          "round_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Round Id",
+            "type": "string"
+          },
+          "phase": {
+            "const": "results",
+            "title": "Phase",
+            "type": "string"
+          },
+          "prompt": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Prompt",
+            "type": "string"
+          },
+          "complete_quote": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Complete Quote",
+            "type": "string"
+          },
+          "canonical_answer": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Canonical Answer",
+            "type": "string"
+          }
+        },
+        "required": [
+          "round_id",
+          "phase",
+          "prompt",
+          "complete_quote",
+          "canonical_answer"
+        ],
+        "title": "RevealedRound",
+        "type": "object"
+      },
+      "PublicGameState": {
+        "additionalProperties": false,
+        "properties": {
+          "channel_id": {
+            "maxLength": 32,
+            "pattern": "^[1-9][0-9]*$",
+            "title": "Channel Id",
+            "type": "string"
+          },
+          "game_id": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Game Id"
+          },
+          "status": {
+            "enum": [
+              "idle",
+              "active",
+              "ended"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "minimum": 0,
+            "title": "Version",
+            "type": "integer"
+          },
+          "server_time": {
+            "format": "date-time",
+            "title": "Server Time",
+            "type": "string"
+          },
+          "round": {
+            "anyOf": [
+              {
+                "discriminator": {
+                  "mapping": {
+                    "answering": "#/components/schemas/HiddenRound",
+                    "cancelled": "#/components/schemas/HiddenRound",
+                    "closed": "#/components/schemas/HiddenRound",
+                    "prepared": "#/components/schemas/HiddenRound",
+                    "results": "#/components/schemas/RevealedRound",
+                    "scoring": "#/components/schemas/HiddenRound"
+                  },
+                  "propertyName": "phase"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/HiddenRound"
+                  },
+                  {
+                    "$ref": "#/components/schemas/RevealedRound"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Round"
+          }
+        },
+        "required": [
+          "channel_id",
+          "game_id",
+          "status",
+          "version",
+          "server_time",
+          "round"
+        ],
+        "title": "PublicGameState",
+        "type": "object"
+      },
+      "AnswerSubmission": {
+        "additionalProperties": false,
+        "properties": {
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "answer": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Answer",
+            "type": "string"
+          }
+        },
+        "required": [
+          "request_id",
+          "answer"
+        ],
+        "title": "AnswerSubmission",
+        "type": "object"
+      },
+      "SubmissionReceipt": {
+        "additionalProperties": false,
+        "properties": {
+          "submission_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Submission Id",
+            "type": "string"
+          },
+          "round_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Round Id",
+            "type": "string"
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "status": {
+            "const": "received",
+            "title": "Status",
+            "type": "string"
+          },
+          "received_at": {
+            "format": "date-time",
+            "title": "Received At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "submission_id",
+          "round_id",
+          "request_id",
+          "status",
+          "received_at"
+        ],
+        "title": "SubmissionReceipt",
+        "type": "object"
+      },
+      "PrivateRoundResult": {
+        "additionalProperties": false,
+        "properties": {
+          "round_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Round Id",
+            "type": "string"
+          },
+          "submission_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Submission Id",
+            "type": "string"
+          },
+          "outcome": {
+            "enum": [
+              "correct",
+              "incorrect"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "awarded_points": {
+            "title": "Awarded Points",
+            "type": "integer"
+          },
+          "scoring_policy_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Scoring Policy Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "round_id",
+          "submission_id",
+          "outcome",
+          "awarded_points",
+          "scoring_policy_id"
+        ],
+        "title": "PrivateRoundResult",
+        "type": "object"
+      },
+      "OwnParticipation": {
+        "additionalProperties": false,
+        "properties": {
+          "round_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Round Id",
+            "type": "string"
+          },
+          "answer": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Answer"
+          },
+          "receipt": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SubmissionReceipt"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PrivateRoundResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "round_id",
+          "receipt",
+          "result"
+        ],
+        "title": "OwnParticipation",
+        "type": "object"
+      },
+      "LeaderboardEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "participant_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Participant Id",
+            "type": "string"
+          },
+          "display_name": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Display Name",
+            "type": "string"
+          },
+          "rank": {
+            "minimum": 1,
+            "title": "Rank",
+            "type": "integer"
+          },
+          "points": {
+            "title": "Points",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "participant_id",
+          "display_name",
+          "rank",
+          "points"
+        ],
+        "title": "LeaderboardEntry",
+        "type": "object"
+      },
+      "Leaderboard": {
+        "additionalProperties": false,
+        "properties": {
+          "game_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Game Id",
+            "type": "string"
+          },
+          "version": {
+            "minimum": 0,
+            "title": "Version",
+            "type": "integer"
+          },
+          "final": {
+            "title": "Final",
+            "type": "boolean"
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/LeaderboardEntry"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "own_entry": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LeaderboardEntry"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "game_id",
+          "version",
+          "final",
+          "entries",
+          "own_entry"
+        ],
+        "title": "Leaderboard",
+        "type": "object"
+      },
+      "QuestionCandidate": {
+        "additionalProperties": false,
+        "properties": {
+          "question_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Question Id",
+            "type": "string"
+          },
+          "complete_quote": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Complete Quote",
+            "type": "string"
+          },
+          "prompt": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Prompt",
+            "type": "string"
+          },
+          "canonical_answer": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Canonical Answer",
+            "type": "string"
+          },
+          "accepted_aliases": {
+            "items": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Accepted Aliases",
+            "type": "array"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceReference"
+          }
+        },
+        "required": [
+          "question_id",
+          "complete_quote",
+          "prompt",
+          "canonical_answer",
+          "accepted_aliases",
+          "source"
+        ],
+        "title": "QuestionCandidate",
+        "type": "object"
+      },
+      "SourceReference": {
+        "additionalProperties": false,
+        "properties": {
+          "stream_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Stream Id",
+            "type": "string"
+          },
+          "segment_ids": {
+            "items": {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Segment Ids",
+            "type": "array"
+          },
+          "received_at": {
+            "format": "date-time",
+            "title": "Received At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "stream_id",
+          "segment_ids",
+          "received_at"
+        ],
+        "title": "SourceReference",
+        "type": "object"
+      },
+      "TranscriptStatus": {
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "enum": [
+              "not_connected",
+              "waiting",
+              "receiving",
+              "stale"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "last_received_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Received At"
+          }
+        },
+        "required": [
+          "status",
+          "last_received_at"
+        ],
+        "title": "TranscriptStatus",
+        "type": "object"
+      },
+      "DashboardSnapshot": {
+        "additionalProperties": false,
+        "properties": {
+          "channel_id": {
+            "maxLength": 32,
+            "pattern": "^[1-9][0-9]*$",
+            "title": "Channel Id",
+            "type": "string"
+          },
+          "stream_id": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stream Id"
+          },
+          "transcript": {
+            "$ref": "#/components/schemas/TranscriptStatus"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/QuestionCandidate"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "game": {
+            "$ref": "#/components/schemas/PublicGameState"
+          },
+          "submission_count": {
+            "minimum": 0,
+            "title": "Submission Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "channel_id",
+          "stream_id",
+          "transcript",
+          "candidates",
+          "game",
+          "submission_count"
+        ],
+        "title": "DashboardSnapshot",
+        "type": "object"
+      },
+      "CaptionSegment": {
+        "additionalProperties": false,
+        "properties": {
+          "sequence": {
+            "minimum": 0,
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "text": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          },
+          "observed_at": {
+            "format": "date-time",
+            "title": "Observed At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sequence",
+          "text",
+          "observed_at"
+        ],
+        "title": "CaptionSegment",
+        "type": "object"
+      },
+      "TranscriptBatch": {
+        "additionalProperties": false,
+        "properties": {
+          "batch_id": {
+            "format": "uuid",
+            "title": "Batch Id",
+            "type": "string"
+          },
+          "source": {
+            "const": "twitch_player_captions",
+            "title": "Source",
+            "type": "string"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/CaptionSegment"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Segments",
+            "type": "array"
+          }
+        },
+        "required": [
+          "batch_id",
+          "source",
+          "segments"
+        ],
+        "title": "TranscriptBatch",
+        "type": "object"
+      },
+      "BatchReceipt": {
+        "additionalProperties": false,
+        "properties": {
+          "batch_id": {
+            "format": "uuid",
+            "title": "Batch Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "received",
+              "duplicate"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "batch_id",
+          "status"
+        ],
+        "title": "BatchReceipt",
+        "type": "object"
+      },
+      "StartGame": {
+        "additionalProperties": false,
+        "properties": {
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "mode": {
+            "const": "quote",
+            "title": "Mode",
+            "type": "string"
+          },
+          "policy_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Policy Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "request_id",
+          "mode",
+          "policy_id"
+        ],
+        "title": "StartGame",
+        "type": "object"
+      },
+      "OpenRound": {
+        "additionalProperties": false,
+        "properties": {
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "question_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Question Id"
+          },
+          "expected_version": {
+            "minimum": 0,
+            "title": "Expected Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "request_id",
+          "expected_version"
+        ],
+        "title": "OpenRound",
+        "type": "object"
+      },
+      "GameCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "expected_version": {
+            "minimum": 0,
+            "title": "Expected Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "request_id",
+          "expected_version"
+        ],
+        "title": "GameCommand",
+        "type": "object"
+      },
+      "ErrorDetail": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "enum": [
+              "unauthenticated",
+              "forbidden",
+              "validation_error",
+              "not_found",
+              "stale_state",
+              "round_closed",
+              "request_conflict",
+              "transcript_unavailable",
+              "policy_unresolved",
+              "consent_denied",
+              "identity_required",
+              "not_configured",
+              "twitch_unavailable",
+              "database_unavailable",
+              "game_active",
+              "round_active",
+              "game_ended",
+              "unsupported_policy",
+              "stream_unavailable",
+              "payload_too_large"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorDetail",
+        "type": "object"
+      },
+      "ErrorEnvelope": {
+        "additionalProperties": false,
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorDetail"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "title": "ErrorEnvelope",
+        "type": "object"
+      },
+      "StateChanged": {
+        "additionalProperties": false,
+        "properties": {
+          "event": {
+            "const": "game_state_changed",
+            "title": "Event",
+            "type": "string"
+          },
+          "channel_id": {
+            "maxLength": 32,
+            "pattern": "^[1-9][0-9]*$",
+            "title": "Channel Id",
+            "type": "string"
+          },
+          "version": {
+            "minimum": 0,
+            "title": "Version",
+            "type": "integer"
+          },
+          "state": {
+            "$ref": "#/components/schemas/PublicGameState"
+          }
+        },
+        "required": [
+          "event",
+          "channel_id",
+          "version",
+          "state"
+        ],
+        "title": "StateChanged",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "ViewerExtensionJWT": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "Twitch Extension JWT"
+      },
+      "StreamerSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "twitch_games_session",
+        "description": "Proposed OAuth session cookie; auth implemented in Step 3"
+      }
+    }
+  },
+  "paths": {
+    "/api/v1/channels/{channel_id}/game-state": {
+      "get": {
+        "operationId": "getGameState",
+        "tags": [
+          "viewer"
+        ],
+        "x-implementation-status": "planned",
+        "security": [
+          {
+            "ViewerExtensionJWT": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Proposed response; endpoint not implemented in Step 1",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicGameState"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Proposed application error; HTTP mapping in contracts.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channel_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/rounds/{round_id}/answers": {
+      "post": {
+        "operationId": "submitAnswer",
+        "tags": [
+          "viewer"
+        ],
+        "x-implementation-status": "planned",
+        "security": [
+          {
+            "ViewerExtensionJWT": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Proposed response; endpoint not implemented in Step 1",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionReceipt"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Proposed application error; HTTP mapping in contracts.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "round_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerSubmission"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/rounds/{round_id}/me": {
+      "get": {
+        "operationId": "getOwnParticipation",
+        "tags": [
+          "viewer"
+        ],
+        "x-implementation-status": "planned",
+        "security": [
+          {
+            "ViewerExtensionJWT": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Proposed response; endpoint not implemented in Step 1",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnParticipation"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Proposed application error; HTTP mapping in contracts.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "round_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/games/{game_id}/leaderboard": {
+      "get": {
+        "operationId": "getLeaderboard",
+        "tags": [
+          "viewer"
+        ],
+        "x-implementation-status": "planned",
+        "security": [
+          {
+            "ViewerExtensionJWT": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Proposed response; endpoint not implemented in Step 1",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Leaderboard"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Proposed application error; HTTP mapping in contracts.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/dashboard/channels/{channel_id}": {
+      "get": {
+        "operationId": "getDashboard",
+        "tags": [
+          "dashboard"
+        ],
+        "x-implementation-status": "planned",
+        "security": [
+          {
+            "StreamerSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Proposed response; endpoint not implemented in Step 1",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardSnapshot"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Proposed application error; HTTP mapping in contracts.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channel_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/streams/{stream_id}/transcript-batches": {
+      "post": {
+        "operationId": "ingestCaptionBatch",
+        "tags": [
+          "dashboard"
+        ],
+        "x-implementation-status": "planned",
+        "security": [
+          {
+            "StreamerSession": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Proposed response; endpoint not implemented in Step 1",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchReceipt"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Proposed application error; HTTP mapping in contracts.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "stream_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TranscriptBatch"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/streams/{stream_id}/questions": {
+      "get": {
+        "operationId": "getQuestionCandidates",
+        "tags": [
+          "dashboard"
+        ],
+        "x-implementation-status": "planned",
+        "security": [
+          {
+            "StreamerSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Proposed response; endpoint not implemented in Step 1",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QuestionCandidate"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Proposed application error; HTTP mapping in contracts.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "stream_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/channels/{channel_id}/games": {
+      "post": {
+        "operationId": "startGame",
+        "tags": [
+          "dashboard"
+        ],
+        "x-implementation-status": "planned",
+        "security": [
+          {
+            "StreamerSession": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Proposed response; endpoint not implemented in Step 1",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicGameState"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Proposed application error; HTTP mapping in contracts.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channel_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartGame"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/{game_id}/rounds": {
+      "post": {
+        "operationId": "openRound",
+        "tags": [
+          "dashboard"
+        ],
+        "x-implementation-status": "planned",
+        "security": [
+          {
+            "StreamerSession": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Proposed response; endpoint not implemented in Step 1",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicGameState"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Proposed application error; HTTP mapping in contracts.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpenRound"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/rounds/{round_id}/close": {
+      "post": {
+        "operationId": "closeRound",
+        "tags": [
+          "dashboard"
+        ],
+        "x-implementation-status": "planned",
+        "security": [
+          {
+            "StreamerSession": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Proposed response; endpoint not implemented in Step 1",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicGameState"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Proposed application error; HTTP mapping in contracts.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "round_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GameCommand"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/{game_id}/end": {
+      "post": {
+        "operationId": "endGame",
+        "tags": [
+          "dashboard"
+        ],
+        "x-implementation-status": "planned",
+        "security": [
+          {
+            "StreamerSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Proposed response; endpoint not implemented in Step 1",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Leaderboard"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Proposed application error; HTTP mapping in contracts.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GameCommand"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

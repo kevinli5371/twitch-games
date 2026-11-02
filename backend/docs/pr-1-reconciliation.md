@@ -1,0 +1,21 @@
+# PR #1 reconciliation
+
+Inspected PR #1 head `2a9e9dff00676609c33bd13dc97c41200d9c370f` on November 2, 2026. PR #1 contains a fixture dashboard and an independent, fail-closed backend foundation. The working `backend/quote-game` branch implements the owner-confirmed quote backend and has tested migrations in `twitch_games`.
+
+Do not merge both backend implementations unchanged. Keep one application factory, identity/permission authority, contract set and migration chain. PR #1's `app.py`, single-file `contracts.py`, `auth.py` seam and raw `game_private` migration overlap the running backend's modules and contracts. The dashboard assets can be integrated against the documented `/api/v1` API without replacing the verified backend with an unconfigured foundation.
+
+The adopted authorization model matches the intent of PR #1's Principal: verified user, selected workspace, owner status and three explicit app permissions. Permissions are re-read from PostgreSQL on protected operations; they are not trusted from browser flags or long-lived session claims. Owners alone mutate grants. The owner confirmed that question reviewers may see hidden answers; other permissions do not grant that access.
+
+Migration 0004 adds profiles, refreshable encrypted authorizations, independent dashboard sessions and moderator grants to the existing private schema. It preserves legacy encrypted sessions through up/down/up verification. Channel ownership is database-derived from the Twitch channel ID, never a browser-supplied owner field. No Supabase Auth system or browser-facing private-table grants are added. Do not separately apply PR #1's proposed schema as another source of truth.
+
+Preserve confirmed gameplay rules when resolving broader PR #1 differences: first release is quote-only, answers are editable until the 30-second deadline, selection is automatic, scores are 1/0 with shared ranks, and rounds advance manually. PR #1's immutable-final-submission helper, multi-mode bank planner, cooldowns and 3–5-question round planning are not approved replacements for those decisions. The fixture's review/create controls are not already-backed API features.
+
+OAuth API paths are `/api/v1/auth/twitch`, `/api/v1/auth/twitch/callback`, `/api/v1/auth/me`, `/api/v1/auth/logout`; `/api/v1/auth/session` is a compatibility alias for basic identity. This preserves the callback registered during backend setup. Production origin is still unselected. See `frontend-handoff.md` for permission mapping, cookie/CORS/CSRF requirements, examples and errors.
+
+PR #1 is now merged into main (9b16fec). This branch merges that main revision, preserves its dashboard assets, root documentation and planning utilities, and resolves the overlapping runtime to one application factory. `twitch_games.app:app` is a compatibility entry point for `twitch_games.main:app`; planning DTOs are retained in `planning_contracts.py`. The proposed raw SQL is preserved under `docs/legacy/` and is not an alternative runnable migration. Foundation API tests now exercise the real factory and current authentication boundaries; planner tests remain intact.
+
+The newer root product documents describe three launch modes, immutable answers, automatic progression and bank planning. Those differ from the quote-only/editable/manual-start runtime confirmed in this chat. This PR flags that scope alignment for review and does not silently change the runtime or erase the dashboard work. The dashboard is not yet connected to the backend.
+
+## PR #2 and owner-approved merge boundary
+
+Merged viewer PR #2 (`f973dbc` on main) without replacing its assets or altering quote gameplay. Its proposed `x-extension-jwt`, camelCase snapshots, answer payloads and snapshot-bearing PubSub messages differ from the implemented API contract. The dashboard remains a fixture and does not yet collect captions. These are explicit frontend integration tasks, not successful E2E observations. On November 2 the owner approved merging the verified backend before the full Twitch/frontend E2E check; that check will run once the test stream is ready. Broader game-mode and policy alignment remains follow-up work.

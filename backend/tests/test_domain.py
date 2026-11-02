@@ -1,13 +1,21 @@
 import unittest
 
 from twitch_games.domain import (
-    BankQuestion, InsufficientSupply, Mode, RoundPlan, Submission,
-    accept_final_answer, eligible_random_modes, plan_reservation,
+    BankQuestion,
+    InsufficientSupply,
+    Mode,
+    RoundPlan,
+    Submission,
+    accept_final_answer,
+    eligible_random_modes,
+    plan_reservation,
 )
 
 
 def bank(mode=Mode.NICHE, count=9, **overrides):
-    values = dict(channel_id="channel", mode=mode, approved=True, source_eligible=True, off_cooldown=True)
+    values = dict(
+        channel_id="channel", mode=mode, approved=True, source_eligible=True, off_cooldown=True
+    )
     values.update(overrides)
     return [BankQuestion(id=f"{mode}-{i}", **values) for i in range(count)]
 
@@ -33,18 +41,33 @@ class ReservationTests(unittest.TestCase):
         source = bank(count=3) + bank(Mode.HIVE, count=2)
         before = tuple(source)
         with self.assertRaises(InsufficientSupply):
-            plan_reservation("channel", [RoundPlan(Mode.NICHE, 3), RoundPlan(Mode.HIVE, 3)], source, randomized=True)
+            plan_reservation(
+                "channel",
+                [RoundPlan(Mode.NICHE, 3), RoundPlan(Mode.HIVE, 3)],
+                source,
+                randomized=True,
+            )
         self.assertEqual(before, tuple(source))
 
     def test_ineligible_and_wrong_channel_supply_cannot_satisfy_start(self):
-        for reason in [{"channel_id": "other"}, {"approved": False}, {"source_eligible": False}, {"off_cooldown": False}, {"reserved": True}]:
+        for reason in [
+            {"channel_id": "other"},
+            {"approved": False},
+            {"source_eligible": False},
+            {"off_cooldown": False},
+            {"reserved": True},
+        ]:
             with self.subTest(reason=reason), self.assertRaises(InsufficientSupply):
-                plan_reservation("channel", [RoundPlan(Mode.NICHE, 3)], bank(count=3, **reason), randomized=True)
+                plan_reservation(
+                    "channel", [RoundPlan(Mode.NICHE, 3)], bank(count=3, **reason), randomized=True
+                )
 
     def test_duplicate_ids_rejected(self):
         source = bank(count=3)
         with self.assertRaises(ValueError):
-            plan_reservation("channel", [RoundPlan(Mode.NICHE, 3)], source + source, randomized=False)
+            plan_reservation(
+                "channel", [RoundPlan(Mode.NICHE, 3)], source + source, randomized=False
+            )
 
     def test_count_bounds(self):
         for value in [0, 2, 6, True, 3.5]:
@@ -55,8 +78,17 @@ class ReservationTests(unittest.TestCase):
         rounds = [RoundPlan(Mode.NICHE, 3)] * 2
         for policy in [None, False]:
             with self.assertRaises(ValueError):
-                plan_reservation("channel", rounds, bank(), randomized=False, allow_exact_repeats=policy)
-        self.assertEqual(2, len(plan_reservation("channel", rounds, bank(), randomized=False, allow_exact_repeats=True)))
+                plan_reservation(
+                    "channel", rounds, bank(), randomized=False, allow_exact_repeats=policy
+                )
+        self.assertEqual(
+            2,
+            len(
+                plan_reservation(
+                    "channel", rounds, bank(), randomized=False, allow_exact_repeats=True
+                )
+            ),
+        )
 
     def test_invalid_eligibility_types_rejected(self):
         for flag in ["false", 0, None]:

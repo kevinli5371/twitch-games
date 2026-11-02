@@ -1,13 +1,17 @@
-"""Pure planning, not a running game service or a persistence substitute.
+"""PR #1 planning utilities, retained independently of the running quote game.
+
+The runtime does not call this planner or its immutable-answer helper. Its actual
+quote-game rules are documented in backend/README.md and implemented in game_service.
+Pure planning is not a running game service or a persistence substitute.
 
 Callers supply the drawn round modes/counts and explicit eligibility. This avoids
 silently choosing count distribution, cooldown counting or selection policies.
 The eventual repository must lock/revalidate all selected rows in one transaction.
 """
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Sequence
 
 
 class Mode(StrEnum):
@@ -45,7 +49,10 @@ class BankQuestion:
             raise ValueError("Channel ID must be nonblank text")
         if not isinstance(self.mode, Mode):
             raise ValueError("mode must be a Mode")
-        if any(type(value) is not bool for value in (self.approved, self.source_eligible, self.off_cooldown, self.reserved)):
+        if any(
+            type(value) is not bool
+            for value in (self.approved, self.source_eligible, self.off_cooldown, self.reserved)
+        ):
             raise ValueError("Eligibility flags must be booleans")
 
 
@@ -88,13 +95,25 @@ def plan_reservation(
         raise ValueError("allow_exact_repeats must be an explicit boolean policy")
     if len({q.id for q in bank}) != len(bank):
         raise ValueError("Duplicate bank question IDs")
-    if randomized and any(a.mode == b.mode for a, b in zip(rounds, rounds[1:])):
+    if randomized and any(a.mode == b.mode for a, b in zip(rounds, rounds[1:], strict=False)):
         raise ValueError("Random rotation cannot repeat consecutive modes")
-    if not randomized and any(a.mode == b.mode for a, b in zip(rounds, rounds[1:])) and allow_exact_repeats is not True:
+    if (
+        not randomized
+        and any(a.mode == b.mode for a, b in zip(rounds, rounds[1:], strict=False))
+        and allow_exact_repeats is not True
+    ):
         raise ValueError("Exact-order repetition requires an explicitly approved policy")
     pool = {
-        mode: [q.id for q in bank if q.channel_id == channel_id and q.mode == mode
-               and q.approved and q.source_eligible and q.off_cooldown and not q.reserved]
+        mode: [
+            q.id
+            for q in bank
+            if q.channel_id == channel_id
+            and q.mode == mode
+            and q.approved
+            and q.source_eligible
+            and q.off_cooldown
+            and not q.reserved
+        ]
         for mode in Mode
     }
     for mode in Mode:
@@ -103,8 +122,8 @@ def plan_reservation(
             raise InsufficientSupply(mode, required, len(pool[mode]))
     result = []
     for item in rounds:
-        selected = tuple(pool[item.mode][:item.question_count])
-        del pool[item.mode][:item.question_count]
+        selected = tuple(pool[item.mode][: item.question_count])
+        del pool[item.mode][: item.question_count]
         result.append(PlannedRound(item.mode, selected))
     return tuple(result)
 

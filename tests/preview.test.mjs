@@ -13,6 +13,7 @@ test('preview rejects mutations and missing assets', async (t) => {
   const url = `http://127.0.0.1:${server.address().port}`;
   assert.equal((await fetch(url, { method: 'POST' })).status, 405);
   assert.equal((await fetch(url + '/missing-asset.js')).status, 404);
+  assert.equal((await fetch(url + '/..%5c..%5cREADME.md')).status, 403);
   const module = await fetch(url + '/model.mjs');
   assert.equal(module.status, 200);
   assert.match(module.headers.get('content-type'), /text\/javascript/);

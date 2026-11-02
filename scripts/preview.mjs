@@ -9,6 +9,7 @@ const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; ch
 
 export function resolveAsset(url) {
   const pathname = decodeURIComponent(new URL(url, 'http://localhost').pathname);
+  if (pathname.includes('\\')) return null;
   const target = path.resolve(root, '.' + (pathname === '/' ? '/index.html' : pathname));
   if (!target.startsWith(root + path.sep) && target !== root) return null;
   return target;

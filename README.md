@@ -2,6 +2,14 @@
 
 A Twitch Extension for streamer-controlled audience games, with a desktop video overlay and a mobile Extension view. The first build includes Quote Completion, Niche, and Hive Mind. Read the [product and architecture specification](docs/product-spec.md) and [backend API handoff](docs/backend-scope.md) before extending the project.
 
+## Implemented backend and integration status
+
+The FastAPI quote-game backend now implements Twitch dashboard OAuth, owner-controlled moderator grants, private Supabase persistence, caption intake, algorithmic quote selection/matching, 30-second rounds, editable answers, scoring, leaderboards and restart recovery. See [backend setup](backend/README.md), [frontend contract](backend/docs/frontend-handoff.md) and [verification evidence](backend/docs/backend-verification.md).
+
+All 24 documented backend API operations passed real local HTTP checks. Real Supabase migrations and Twitch browser OAuth/refresh checks also passed. On November 2, the owner approved backend merge with full Twitch/frontend E2E deferred until the test stream is ready. Installed Extension JWTs/PubSub, actual caption capture, frontend contract wiring, mobile/device checks and production deployment remain pending.
+
+The broader three-mode product plan and UI fixtures below are separate from the implemented quote runtime. Quote mode currently uses manual advancement, no early close, editable answers and 1/0 scoring. [Reconciliation notes](backend/docs/pr-1-reconciliation.md) record these differences; merging the backend does not claim the entire broader plan is implemented.
+
 ## Viewer overlay preview and Twitch Local Test
 
 Requires Node.js 20+ and OpenSSL (included with macOS). No package install is needed.
@@ -39,7 +47,7 @@ Open `http://127.0.0.1:4173/`. If the port is occupied, set `PORT` to another po
 - The local overlay preview and Twitch viewer/mobile asset shells are implemented.
 - The Extension uses Twitch's Extension Helper identity callback, private HTTPS snapshot/submission calls, and Extension PubSub updates. A viewer can minimize the overlay for themselves; the streamer dashboard/backend handoff includes a channel-wide visibility flag.
 - The backend URL is blank, and live API calls, Twitch Local Test, and device behavior have not been verified. The local demo is not live gameplay.
-- The streamer dashboard fixture and FastAPI backend foundation are in the repository, but there is no deployed playable game service. Captions are conditional and live capture is unverified.
+- The streamer dashboard remains a fixture. The implemented quote backend runs locally; the viewer’s proposed auth, payload and PubSub contract still needs wiring to the actual API. No public deployment or real caption capture is verified.
 
 ## First-build gameplay decisions
 
