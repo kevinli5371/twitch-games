@@ -18,7 +18,7 @@ The original in-memory visual simulator remains at `/preview.html`; `viewer.html
 
 ## Observed verification and limits
 
-151 Python tests plus 10 subtests and 16 Node tests pass. All 24 backend operations have successful real HTTP cases. The actual JavaScript clients also complete a real API/database round, and browser testing verified two viewers, private answers/edits, the 30-second close, backend scores, final standings and reconnect. Twitch/caption inputs in that repeatable flow are explicitly synthetic. See [evidence and setup](docs/fullstack-integration.md).
+151 Python tests plus 10 subtests and 21 Node tests pass. All 24 backend operations have successful real HTTP cases. The actual JavaScript clients also complete a real API/database round, and browser testing verified two viewers, private answers/edits, the 30-second close, backend scores, final standings and reconnect. Twitch/caption inputs in that repeatable flow are explicitly synthetic. See [evidence and setup](docs/fullstack-integration.md).
 
 The owner selected Supabase HTTPS project URL + server secret to avoid the unreachable IPv6 direct endpoint. The HTTP storage adapter passes local real-PostgREST checks and the actual hosted gateway accepts the key. The tested migration is installed and the local API now runs through Supabase HTTPS with successful readiness, session restoration and a removable hosted write probe; see [HTTP storage setup](backend/docs/supabase-http-migration.md). Real caption-enabled broadcast, installed Extension/PubSub, physical devices and public deployment remain unverified.
 
@@ -33,3 +33,7 @@ The quote backend keeps its confirmed manual advancement, 30-second deadline, ed
 - Answer validity and equivalent-answer grouping are backend-owned and remain placeholders in this build. First-build scoring and tie handling are documented in [the product spec](docs/product-spec.md).
 
 Never commit credentials. Update the README with commands actually run, observed results, and known limitations.
+
+## Visual design
+
+The connected dashboard and desktop/mobile viewer include the light/dark redesign and compact pixel viewer. `npm run dev:design` serves the separate visual gallery on port 4175. The gallery and planning tabs use sample data; the default Live game uses FastAPI. See [design notes](docs/pixel-overlay-design.md).

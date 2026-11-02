@@ -131,6 +131,10 @@ The dashboard teammate implements browser collection against Kevin's authenticat
 
 ## 3. Viewer application: Twitch Extension
 
+**Requested design exploration — November 2, 2026:** explore a pixel-game visual direction inspired by [Krillion](https://krillion.io), with UI/UX screens for all three modes. This is a proposed alternative for review, not a confirmed replacement of the current overlay or a change to gameplay rules. Mockup scope and observed validation are recorded in [pixel overlay design](pixel-overlay-design.md).
+
+**Later owner direction — November 2, 2026:** proceed with building this pixel UI on the existing overlay infrastructure, including the light presentation explored for Twitch's white UI. This authorizes the visual implementation for desktop/mobile and all three mode screens; it does not resolve the separate viewer/backend contract and gameplay-policy differences. Actual implementation and validation are recorded in [viewer overlay](viewer-overlay.md).
+
 ### Desktop surface
 
 **Confirmed:** native Extension displayed over the video, with free-text answer entry. Viewers do not install a browser extension.
@@ -141,6 +145,7 @@ The overlay should avoid unnecessary coverage of the broadcast. Use Twitch's Ext
 
 ### Overlay visibility controls
 
+- **Owner-requested minimized UI — November 2, 2026:** offer a viewer-only compact pixel tab for people who prefer just watching. It provides a way back to the current game without changing participation records or game state. The expanded card's Minimize action and Twitch's full-extension Hide action are distinct. This does not change the default expanded presentation for a new session.
 - The streamer dashboard controls a channel-wide visibility flag. Turning it off hides game content for viewers without ending play, closing submissions, resetting scores, or changing progress. Turning it on restores the current game state.
 - A viewer may minimize/hide the overlay for themselves using Twitch's Extension controls; restoring it shows the latest state. This does not change other viewers' visibility or game progress.
 - The broadcaster must activate the Extension on their channel. A viewer cannot enable it on an arbitrary channel. Twitch controls the availability of video overlays when the channel is offline.
@@ -178,6 +183,10 @@ The Extension must follow Twitch's identity requirements for user-submitted text
 **Proposed:** allow spectators to view the game; request identity sharing when they choose to participate. Show appropriate permission states. Whether raw answers will ever appear publicly is open; they are not automatically included in a leaderboard.
 
 ## 4. Streamer application: standalone dashboard
+
+**Owner-selected visual direction — November 2, 2026:** use a similar visual style to [Outcrowd's AI Analytics Dashboard](https://dribbble.com/shots/27167729-AI-Analytics-Dashboard): near-black rounded surfaces, horizontal pill navigation, violet data visualization, compact metrics and a bright purple action card. The owner requested an iterative skeptic review of visual similarity, functioning UI, accessible control placement and intuitive copy. This is a dashboard design direction; it does not change gameplay rules or select new backend behavior. Actual prototype progress and validation are recorded in the README and [dashboard design review](dashboard-design-review.md).
+
+**Later dashboard presentation direction — November 2, 2026:** build a light-mode version first. Preserve the layout, visual hierarchy and purple accents in a white/lavender presentation, with the dark version available for comparison. This changes visual presentation only.
 
 The dashboard is a separate web application authenticated with the streamer's Twitch account. Keeping it separate makes room for a properly visible embedded player if we use Twitch's caption event. Embedding the dashboard controls in Twitch Live Config can be a later integration.
 

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Stream Games · Pixel overlay lab</title>
+  <link rel="stylesheet" href="pixel.css">
+  <link rel="stylesheet" href="pixel-light.css">
+  <script type="module" src="pixel.js"></script>
+</head>
+<body>
+  <header class="site-header"><a class="wordmark" href="/design/">✦ STREAM GAMES</a><span class="edition">OVERLAY LAB / 02</span><div class="theme-picker" role="group" aria-label="Preview color theme"><button type="button" data-theme="light" aria-pressed="true">Light</button><button type="button" data-theme="dark" aria-pressed="false">Dark</button></div><a href="/preview.html">Integrated viewer ↗</a></header>
+  <main>
+    <section class="intro"><div><p class="eyebrow">PRESS PLAY ON SOMETHING DIFFERENT</p><h1>A little side quest.</h1><p class="intro-copy">Pixel edges. Private answers. Three ways to play along.</p></div><div class="prototype-note"><span class="tiny-star">✦</span><div><strong>Local design prototype</strong><p>All prompts, receipts, results, and scores are samples.</p></div></div></section>
+    <div class="mode-picker" role="group" aria-label="Preview game mode">
+      <button type="button" data-mode="quote" aria-pressed="true"><span class="mode-number">01</span><span>Quote completion<small>Remember the missing word</small></span><span class="picker-symbol">“ ”</span></button>
+      <button type="button" data-mode="niche" aria-pressed="false"><span class="mode-number">02</span><span>Niche<small>Find an uncommon answer</small></span><span class="picker-symbol">◇</span></button>
+      <button type="button" data-mode="hive" aria-pressed="false"><span class="mode-number">03</span><span>Hive mind<small>Think like the crowd</small></span><span class="picker-symbol">▦</span></button>
+    </div>
+    <section class="playground" aria-labelledby="playground-title">
+      <div class="playground-toolbar"><h2 id="playground-title">Try the viewer flow</h2><div role="group" aria-label="Presentation"><button type="button" data-layout="desktop" aria-pressed="true">Desktop overlay</button><button type="button" data-layout="mobile" aria-pressed="false">Mobile view</button></div></div>
+      <div id="stage" class="stage" data-layout="desktop">
+        <div class="pixel-scene" aria-hidden="true"><div class="pixel-sun"></div><div class="cloud cloud-one"></div><div class="cloud cloud-two"></div><div class="mountain-back"></div><div class="mountain-front"></div><div class="pixel-ground"></div><div class="pixel-tree tree-one"></div><div class="pixel-tree tree-two"></div><div class="scene-cross cross-one">✦</div><div class="scene-cross cross-two">+</div></div>
+        <div class="stream-caption"><span>SIMULATED BROADCAST</span><h3>Your stream.<br>Still the main event.</h3><p>The game lives in a compact card.<br>Viewers can tuck it away at any time.</p></div>
+        <span class="stage-label" id="stage-label">DESKTOP / SAMPLE STREAM</span>
+        <div id="live-card" class="live-card" aria-live="polite"></div>
+        <button type="button" id="restore-overlay" hidden>Show game ▸</button>
+      </div>
+      <div class="screen-controls"><label for="screen-state">Preview screen</label><select id="screen-state"><option value="answering">01 · Answering</option><option value="submitted">02 · Answer locked in</option><option value="closed">03 · Waiting for results</option><option value="results">04 · Round result</option><option value="leaderboard">05 · Round standings</option><option value="standings">06 · Final standings</option><option value="idle">No active game</option><option value="permission">Participation permission</option><option value="disconnected">Connection lost</option><option value="failed">Submission failed</option></select><button type="button" id="restart-round">Restart sample round ↻</button><a href="#screen-library">See all game screens ↓</a></div>
+      <div class="screen-controls outcome-controls"><label for="result-example">Result example</label><select id="result-example"><option value="success">Points earned</option><option value="zero">No points earned</option><option value="missed">No answer submitted</option></select><span class="lab-caption">Selecting an example opens its result screen.</span></div>
+      <p class="lab-caption">Type any answer and send it to try a simulated receipt. The timer is illustrative. Screen controls reset the sample state. Nothing is sent to Twitch.</p>
+    </section>
+    <section class="library" id="screen-library" aria-labelledby="library-title"><div class="library-heading"><div><p class="eyebrow">THE WHOLE JOURNEY</p><h2 id="library-title">Three games. Every key screen.</h2><p>Static mockups below; try the working controls in the preview above.</p></div><span class="library-key">01 ANSWER → 02 LOCK → 03 REVEAL → 04 STANDINGS</span></div><div id="gallery"></div></section>
+    <footer><p>Pixel direction inspired by <a href="https://krillion.io" target="_blank" rel="noopener">Krillion ↗</a>. Original artwork and layouts; locally bundled Silkscreen font.</p><p>Design exploration only · Twitch, backend, and device validation pending.</p></footer>
+  </main>
+</body>
+</html>

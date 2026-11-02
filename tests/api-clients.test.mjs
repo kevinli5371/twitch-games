@@ -66,6 +66,7 @@ test('unified server serves both clients and proxies cookies/CSRF without exposi
  try {
   const page=await fetch(base+'/');assert.match(await page.text(),/live-start/);
   assert.equal((await fetch(base+'/viewer.html')).status,200);
+  const font=await fetch(base+'/fonts/Silkscreen-Regular.ttf');assert.equal(font.status,200);assert.equal(font.headers.get('content-type'),'font/ttf');assert.ok((await font.arrayBuffer()).byteLength>30000);
   assert.match((await fetch(base+'/api-adapter.mjs')).headers.get('content-type'),/javascript/);
   assert.equal((await fetch(base+'/backend/.env')).status,403);
   assert.equal(resolveAsset('/dashboard/%5c..%5c.env'),null);

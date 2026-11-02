@@ -30,6 +30,7 @@
   let chosenMode = "quote";
   let roundNumber = 1;
   let roundCount = 5;
+  let gameNumber = 1;
   let modeSelection = "streamer";
   let previousRandomMode = null;
   let lastAnswer = "";
@@ -52,6 +53,8 @@
       { displayName: "NovaStar", score: 12 },
       { displayName: "PixelPilot", score: 9 },
       { displayName: "MapleMode", score: 5 },
+      { displayName: "SkyByte", score: 4 },
+      { displayName: "QuietQuest", score: 2 },
       { displayName: "You", score: sessionScore, isYou: true },
     ].sort((a, b) => b.score - a.score).map((entry, index, rows) => ({
       ...entry,
@@ -61,7 +64,7 @@
       isPreview: true,
       overlayEnabled: streamerOverlayEnabled,
       identityLinked: true,
-      gameId: "local-sample-game",
+      gameId: `local-sample-game-${gameNumber}`,
       gameStatus: phase === "ended" ? "ended" : "active",
       mode,
       roundNumber,
@@ -179,6 +182,12 @@
   };
 
   document.addEventListener("DOMContentLoaded", () => {
+    const themeLabel=document.createElement('label');themeLabel.className='round-count-control';themeLabel.append(document.createTextNode('Theme '));
+    const themeSelect=document.createElement('select');themeSelect.setAttribute('aria-label','Preview color theme');
+    for(const value of ['light','dark']){const option=document.createElement('option');option.value=value;option.textContent=value==='light'?'Light':'Dark';themeSelect.append(option);}
+    themeSelect.value=document.documentElement.dataset.theme||'light';
+    themeSelect.addEventListener('change',()=>window.StreamGameTheme?.set(themeSelect.value));themeLabel.append(themeSelect);
+    document.querySelector('.controls-heading')?.append(themeLabel);
     document.querySelectorAll("[data-mode]").forEach((button) => button.addEventListener("click", () => changeMode(button.dataset.mode)));
     document.querySelectorAll("[data-phase]").forEach((button) => button.addEventListener("click", () => {
       phase = button.dataset.phase;
@@ -203,6 +212,7 @@
         countSelect.append(option);
       }
       countSelect.addEventListener("change", () => {
+        gameNumber += 1;
         roundCount = Number(countSelect.value);
         roundNumber = 1;
         sessionScore = 0;
@@ -251,6 +261,7 @@
 
     const stateRow = controls?.querySelector(".state-controls");
     if (stateRow) {
+      const refreshButton=document.createElement('button');refreshButton.className='state-button';refreshButton.type='button';refreshButton.textContent='Refresh snapshot';refreshButton.addEventListener('click',render);stateRow.append(refreshButton);
       const closeButton = document.createElement("button");
       closeButton.className = "state-button";
       closeButton.type = "button";
