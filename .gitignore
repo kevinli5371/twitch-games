@@ -1,4 +1,12 @@
-.env*
+node_modules/
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+.env
+.env.*
 !.env.example
+coverage/
+artifacts/
 public/extension-config.local.js
 certs/
