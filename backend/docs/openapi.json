@@ -3074,6 +3074,17 @@
             "type": "array",
             "title": "Permissions"
           },
+          "login": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Login"
+          },
           "display_name": {
             "anyOf": [
               {

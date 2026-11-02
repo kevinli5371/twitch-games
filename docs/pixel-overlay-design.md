@@ -39,3 +39,7 @@ The audience-suggestion form is not mocked here because its fields, supported mo
 - All 11 existing Node tests, pixel JavaScript syntax check, and `git diff --check` passed.
 
 No real answer evaluation, Twitch identity, caption collection, live backend, Twitch device/keyboard test, or platform approval was performed.
+
+## Connected integration review
+
+PR #6 now depends on PR #5 (which depends on #4). The shared pixel renderer imports `public/api-adapter.mjs`; it does not retain the earlier proposed headers, snapshot messages or answer contract. The connected quote game keeps editable raw answers, actual backend points, manual rounds and truthful round labels. Compact mode, themes, pixel sprites, in-memory drafts and supplied final standings are preserved. The standalone design gallery still uses labelled sample data. Native viewer/mobile bundled assets use relative paths; the connected server serves the bundled font as `font/ttf`.

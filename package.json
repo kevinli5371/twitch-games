@@ -3,14 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Twitch Games viewer extension, dashboard fixture, and backend foundation",
+  "description": "Connected Twitch quote game dashboard, viewer Extension and FastAPI backend",
   "scripts": {
-    "dev:design": "node scripts/design-preview.mjs",
     "dev": "node scripts/dev-server.mjs",
-    "dev:dashboard": "node scripts/preview.mjs",
+    "dev:dashboard": "node scripts/app-server.mjs",
     "cert": "node scripts/create-local-cert.mjs",
-    "check": "node --check public/overlay.js && node --check public/overlay-theme.js && node --check public/preview.js && node --check public/demo-adapter.js && node --check scripts/dev-server.mjs && node --check scripts/create-local-cert.mjs",
-    "test": "node --test tests/*.test.mjs apps/dashboard/model.test.mjs"
+    "check": "node --check public/overlay.js && node --check public/preview.js && node --check public/demo-adapter.js && node --check scripts/dev-server.mjs && node --check scripts/create-local-cert.mjs && node --check apps/dashboard/live.js && node --check public/api-adapter.mjs && node --check scripts/app-handler.mjs && node --check public/overlay-theme.js && node --check apps/dashboard/app.js && node --check scripts/design-preview.mjs",
+    "test": "node --test tests/*.test.mjs apps/dashboard/model.test.mjs",
+    "dev:app": "node scripts/app-server.mjs",
+    "dev:design": "node scripts/design-preview.mjs"
   },
-  "engines": { "node": ">=22" }
+  "engines": {
+    "node": ">=22"
+  }
 }

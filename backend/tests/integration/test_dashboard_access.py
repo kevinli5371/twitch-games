@@ -165,6 +165,10 @@ def test_explicit_permission_matrix_and_immediate_revocation(workspace):
         "permissions": ["live_control"],
     }
     assert {w["channel_id"] for w in selected["workspaces"]} == {owner, moderator}
+    assert (
+        next(w for w in selected["workspaces"] if w["channel_id"] == owner)["login"]
+        == "user" + owner
+    )
     snapshot = client.get(f"/api/v1/dashboard/channels/{owner}", headers=mod_headers)
     assert snapshot.status_code == 200 and snapshot.json()["candidates"] == []
     assert client.get(f"/api/v1/streams/{stream}/questions", headers=mod_headers).status_code == 403

@@ -45,4 +45,30 @@ Merged main at `9b16fec` (PR #1), preserved its dashboard and pure planning util
 
 ## Deferred live E2E boundary
 
-The owner approved backend merge on November 2 with full Twitch/frontend E2E deferred until the caption-enabled test stream is ready. Main’s dashboard and viewer assets are preserved. Their presence does not verify caption collection or API compatibility; the viewer still uses a proposed contract that differs from the implemented handoff. These checks remain pending after merge.
+The owner approved backend merge on November 2 with full Twitch/frontend E2E deferred until the caption-enabled test stream is ready. At that merge, the dashboard and viewer assets still needed contract wiring. Subsequent connected-client and HTTPS-storage verification is recorded below; real captions/installed Extension checks remain pending.
+
+## Connected client verification
+
+The actual dashboard API client, caption queue and viewer adapter now run against Uvicorn/PostgreSQL in `scripts/fullstack_clients.mjs`, invoked by the Docker verification suite. A real 30-second quote round verifies private edits, scoring, state restoration, final standings and logout. A disposable browser check also exercised the actual dashboard and two viewer UIs (correct and incorrect outcomes), reload and the mobile entry at 390px. Twitch identity/captions in these checks remain explicit fixtures. See root `docs/fullstack-integration.md` for current setup and remaining real Twitch/deployment checks.
+
+A later read-only hosted connectivity check found the configured direct host has an IPv6 DNS record, but this machine returns `EHOSTUNREACH` for IPv6 TCP; authentication is not reached. The previously successful hosted checks are historical observations, not a claim of current connectivity. The owner subsequently chose the HTTPS storage path below; session-pooler configuration is not required by the active runtime.
+
+## Supabase HTTPS storage migration
+
+The configured modern server key was accepted by the real HTTPS Data API gateway. The hosted backend RPC migration and local HTTP-mode activation are now verified below; the credential check alone is not counted as full hosted gameplay verification.
+
+Local migration 0005, 151 Python tests plus 10 subtests, 16 Node tests, real SQL/HTTP API checks and the actual dashboard/viewer JS round passed. All 24 API operations had successful HTTP cases through the real PostgREST adapter. Additional real RPC checks verified batch rollback, 105 concurrent submissions, identical retry receipts, exactly-once scoring, own rank outside the top 100, refresh fencing, and revoked grants. A deliberately failed startup RPC recovered and timers still finalized the real 30-second round; readiness includes worker initialization. PostgreSQL/PostgREST/gateway resources were removed after each run. Twitch and gateway-key mapping in these repeatable checks are explicit fixtures; database transactions and API execution are real.
+
+See `supabase-http-migration.md` for the exact install script, role boundaries, activation and hosted evidence. Existing real Twitch/caption/device/deployment limits remain.
+
+## Hosted HTTPS activation — November 2, 2026
+
+After the owner ran the tested SQL installer, the real Supabase gateway/RPC verified `0005_http_rpc` with the configured server key. A temporary hashed OAuth-state record was inserted, consumed once, rejected on replay, and cleanup was confirmed. Repeat with `scripts/check_supabase_http.py --require-rpc --exercise-writes`; the check neither fabricates a broadcaster/game nor touches real user sessions.
+
+Selected `TWITCH_GAMES_STORAGE_BACKEND=supabase_http` in ignored local configuration and restarted the local API. `/health/live` and `/health/ready` returned 200, with database and workers ready. Unauthenticated `/auth/me` returned 401. The existing real browser session restored kevinli16's owned workspace and all three owner permissions; selecting an ungranted workspace returned `forbidden`. The dashboard's real CSRF-protected stream-connect request reached Twitch and correctly reported the channel offline. No real game, caption capture or installed Extension result is claimed while the test stream is offline.
+
+Hosted latency exposed a UI loading gap; game/source controls now remain disabled until a workspace snapshot loads and during workspace changes. All 16 Node tests and syntax/diff checks pass after the fix. The running app and dashboard are available on localhost; public deployment and actual Twitch/device E2E are still separate work.
+
+## Browser E2E without a live stream — November 2, 2026
+
+The full Docker suite passed again: 151 Python tests plus 10 subtests, both SQL/HTTP runtime suites and all 24 API operations. All 16 Node tests passed. Actual browser interaction completed two games through real PostgREST with explicit Twitch fixtures, including notice-driven updates with fallback polling disabled, aliases, answer edits/reload, correct/incorrect outcomes, mobile spelling tolerance and per-game reset. Real Twitch browser sign-in/sign-out/sign-in also passed separately against hosted HTTPS storage. Disposable resources were removed; real broadcast/native Extension/physical device checks remain pending. See [precise steps and remaining checks](e2e-without-stream.md).

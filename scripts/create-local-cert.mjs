@@ -53,5 +53,5 @@ if (process.exitCode !== 1) {
   await Promise.all([chmod(caKey, 0o600), chmod(serverKey, 0o600)]);
   console.log("Created localhost HTTPS certificates in certs/ (ignored by git).");
   console.log("Import certs/localhost-ca.pem into the macOS login keychain and set it to Always Trust.");
-  console.log("Then run npm run dev and use https://localhost:4173/ in Twitch Local Test.");
+  console.log("Then run npm run dev and use https://localhost:4174/ in Twitch Local Test.");
 }

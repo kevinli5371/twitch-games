@@ -1,3 +1,4 @@
+import {createTwitchAdapter} from "./api-adapter.mjs";
 const MODE_META = Object.freeze({
   quote: { title: "Quote Completion", symbol: "“ ”", promptLabel: "Complete the quote", answerLabel: "Your missing word" },
   niche: { title: "Niche", symbol: "◇", promptLabel: "Find the uncommon answer", answerLabel: "Your answer" },
@@ -129,9 +130,8 @@ function addPromptText(target, rawText) {
 }
 
 function roundLabel(state) {
-  const roundNumber = Number(state.roundNumber || 1);
-  const roundCount = Number(state.roundCount || 5);
-  return `Round ${roundNumber} of ${roundCount}`;
+  if (!state.roundNumber) return "Quote round";
+  return state.roundCount ? `Round ${state.roundNumber} of ${state.roundCount}` : `Round ${state.roundNumber}`;
 }
 
 function startCountdown(deadlineAt) {
@@ -263,7 +263,7 @@ function renderAnswering(state) {
     input.spellcheck = false;
     input.placeholder = state.mode === "quote" ? "Type the missing word" : "Type your answer";
     const key = roundKey(state);
-    input.value = answerDrafts.get(key) || '';
+    input.value = answerDrafts.get(key) ?? state.editingAnswer ?? '';
     input.addEventListener('input', () => answerDrafts.set(key, input.value));
     input.setAttribute("aria-label", info.answerLabel);
     const submit = element("button", "submit-button");
@@ -274,8 +274,8 @@ function renderAnswering(state) {
     form.append(labelRow, row);
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
-      const answer = input.value.trim();
-      if (!answer || !adapter || pendingSubmissions.has(key)) return;
+      const answer = input.value;
+      if (!answer.trim() || !adapter || pendingSubmissions.has(key)) return;
       pendingSubmissions.add(key);
       submit.disabled = true;
       input.disabled = true;
@@ -301,7 +301,7 @@ function renderAnswering(state) {
   }
 
   const footnote = element("p", "card-footnote");
-  footnote.append(document.createTextNode("One submission"), icon("footnote-separator", ""), document.createTextNode("No speed bonus"));
+  footnote.append(document.createTextNode(state.canEdit ? "Edit until time ends" : "One submission"), icon("footnote-separator", ""), document.createTextNode("No speed bonus"));
   inner.append(footnote);
   appendSourceNote(inner, state.sourceTimestamp);
   root.replaceChildren(card);
@@ -316,14 +316,15 @@ function renderSubmitted(state) {
   const panel = element("div", "state-panel");
   const badge = element("div", "state-icon is-success", ICONS.check);
   badge.replaceChildren(pixelSprite('check'));
-  panel.append(badge, element("h2", "state-title", "Locked in!"));
+  panel.append(badge, element("h2", "state-title", "Answer received"));
   panel.append(element("p", "state-description", "Your answer has been received. Keep watching; results will appear when the round is revealed."));
   if (state.ownSubmission?.answer) {
     const echo = element("div", "submission-echo");
     echo.append(icon("", ICONS.check), element("span", "", state.ownSubmission.answer));
     panel.append(echo);
   }
-  panel.append(element("p", "card-footnote", "One final answer · No edits after sending"));
+  if (state.canEdit) panel.append(button("Edit answer", "retry-button", () => render({...state, ownSubmission:null, editingAnswer:state.ownSubmission?.answer || ""})));
+  panel.append(element("p", "card-footnote", state.canEdit ? "Edit until time ends · No speed bonus" : "One final answer · No edits after sending"));
   if(state.isPreview)panel.append(element('p','card-footnote','Simulated receipt · nothing sent to Twitch.'));
   inner.append(panel);
   root.replaceChildren(card);
@@ -368,7 +369,7 @@ function renderResults(state, ended = false) {
   panel.append(badge, element("h2", "state-title", ended ? "GG, everyone." : "Round results"));
 
   if (ended) {
-    panel.append(element("p", "state-description", `That’s the game. Final standings after ${state.roundCount || 5} rounds.`));
+    panel.append(element("p", "state-description", state.roundCount ? `That’s the game. Final standings after ${state.roundCount} rounds.` : "That’s the game. Here are the final standings."));
   } else if (results.outcomeLabel) {
     panel.append(element("p", "state-description", results.outcomeLabel));
   } else {
@@ -511,187 +512,6 @@ function render(state) {
   if(answerDrafts.size>20)answerDrafts.delete(answerDrafts.keys().next().value);
 }
 
-function normalizeSnapshot(payload) {
-  const game = payload?.game || {};
-  const round = payload?.round || payload?.currentRound || null;
-  const prompt = round?.prompt;
-  const deadlineAt = round?.deadlineAt || round?.closesAt || null;
-  const rawPhase = String(round?.phase || round?.state || (game.status === "ended" ? "ended" : "") || "").toLowerCase();
-  const phase = rawPhase === "open" || rawPhase === "active" ? "answering" : rawPhase || null;
-  const sourceStatus = String(payload?.source?.status || payload?.transcript?.status || "").toLowerCase();
-  return {
-    status: !game.id || game.status === "inactive" ? "idle" : undefined,
-    game,
-    gameStatus: game.status,
-    gameId: game.id,
-    round,
-    roundId: round?.id,
-    roundNumber: round?.number || round?.roundNumber || 1,
-    roundCount: game.roundCount ?? game.configuredRoundCount ?? 5,
-    mode: normalizeMode(round?.mode),
-    phase,
-    prompt,
-    deadlineAt,
-    transcriptUnavailable: Boolean(payload?.transcriptUnavailable) || ["unavailable", "stale", "collecting", "no_captions"].includes(sourceStatus),
-    leaderboard: payload?.leaderboard || game.leaderboard || [],
-    finalLeaderboard: payload?.finalLeaderboard || game.finalLeaderboard || [],
-    results: round?.results || round?.result || payload?.results || null,
-    sourceTimestamp: round?.sourceTimestamp || prompt?.sourceTimestamp || null,
-    evaluationIsPlaceholder: false,
-    identityLinked: false,
-    overlayEnabled: payload?.overlayEnabled ?? game.overlayEnabled ?? true,
-  };
-}
-
-function createTwitchAdapter() {
-  const listeners = new Set();
-  let auth = null;
-  let snapshot = { loading: true };
-  let poll = null;
-  let authorizationTimer = null;
-  let lastVersion = -1;
-  const extension = window.Twitch?.ext;
-  const apiBaseUrl = String(window.TWITCH_GAMES_CONFIG?.apiBaseUrl || "").replace(/\/$/, "");
-  let isVisible = true;
-
-  const emit = () => listeners.forEach((listener) => listener(snapshot));
-  const linked = () => Boolean(extension?.viewer?.isLinked && extension?.viewer?.id);
-  const headers = () => ({
-    "Content-Type": "application/json",
-    "x-extension-jwt": auth?.token || "",
-  });
-
-  function onVisibilityChanged(callback) {
-    if (typeof extension?.onVisibilityChanged !== "function") return;
-    extension.onVisibilityChanged((visible) => {
-      isVisible = Boolean(visible);
-      callback(isVisible);
-    });
-  }
-
-  async function request(path, options = {}) {
-    if (!apiBaseUrl) throw new Error("The local viewer has no backend configured yet.");
-    const response = await fetch(`${apiBaseUrl}${path}`, { ...options, headers: { ...headers(), ...options.headers } });
-    if (!response.ok) {
-      if (response.status === 409) throw new Error("This round has already closed or your answer was already received.");
-      if (response.status === 401 || response.status === 403) throw new Error("Twitch could not authorize this request. Reopen the Extension and try again.");
-      throw new Error("The game service could not complete that request. Please try again.");
-    }
-    if (response.status === 204) return null;
-    return response.json();
-  }
-
-  async function loadPrivateState(state) {
-    if (!linked()) return state;
-    const privatePath = state?.roundId
-      ? `/rounds/${encodeURIComponent(state.roundId)}/me`
-      : state?.gameId && state?.gameStatus === "ended"
-        ? `/games/${encodeURIComponent(state.gameId)}/me`
-        : null;
-    if (!privatePath) return { ...state, identityLinked: true };
-    try {
-      const result = await request(privatePath);
-      return {
-        ...state,
-        identityLinked: true,
-        ownSubmission: result?.submission || null,
-        ownResult: result?.result || null,
-        ownStanding: result?.standing || null,
-      };
-    } catch {
-      return { ...state, identityLinked: true };
-    }
-  }
-
-  async function refresh() {
-    if (!auth?.channelId) return;
-    if (!apiBaseUrl) {
-      snapshot = { status: "not-configured" };
-      emit();
-      return;
-    }
-    try {
-      const payload = await request(`/channels/${encodeURIComponent(auth.channelId)}/game-state`);
-      let next = normalizeSnapshot(payload);
-      next = await loadPrivateState(next);
-      const incomingVersion = Number.isFinite(Number(payload?.version)) ? Number(payload.version) : lastVersion + 1;
-      if (incomingVersion >= lastVersion) {
-        lastVersion = incomingVersion;
-        snapshot = next;
-        emit();
-      }
-    } catch (error) {
-      snapshot = { error: error.message || "The game service could not be reached." };
-      emit();
-    }
-  }
-
-  function handlePubSub(_target, contentType, message) {
-    if (contentType !== "application/json") return;
-    try {
-      const event = JSON.parse(message);
-      if (!event || !["game_snapshot", "game_updated"].includes(event.type) || !event.snapshot) return;
-      const version = Number(event.version ?? event.snapshot.version ?? 0);
-      if (version < lastVersion) return;
-      lastVersion = version;
-      loadPrivateState(normalizeSnapshot(event.snapshot)).then((next) => {
-        snapshot = next;
-        emit();
-      });
-    } catch {
-      // Ignore malformed public events; a fresh snapshot is the recovery path.
-    }
-  }
-
-  if (!extension) {
-    snapshot = { status: "not-in-twitch" };
-  } else {
-    extension.listen?.("broadcast", handlePubSub);
-    authorizationTimer = setTimeout(() => {
-      if (!auth) {
-        snapshot = { status: "not-in-twitch" };
-        emit();
-      }
-    }, 8000);
-    extension.onAuthorized?.((authorization) => {
-      auth = authorization;
-      clearTimeout(authorizationTimer);
-      refresh();
-    });
-    extension.viewer?.onChanged?.(() => {
-      if (snapshot && snapshot.roundId) loadPrivateState(snapshot).then((next) => { snapshot = next; emit(); });
-    });
-    poll = setInterval(() => {
-      if (isVisible && !document.hidden && auth?.channelId) refresh();
-    }, 15000);
-  }
-
-  return {
-    subscribe(listener) { listeners.add(listener); listener(snapshot); return () => listeners.delete(listener); },
-    refresh,
-    async submit(answer) {
-      if (!auth?.token || !linked()) throw new Error("Link your Twitch identity before submitting.");
-      if (!snapshot?.roundId) throw new Error("There is no open round to answer.");
-      const submittedRound = snapshot.roundId;
-      await request(`/rounds/${encodeURIComponent(submittedRound)}/answers`, {
-        method: "POST",
-        body: JSON.stringify({ answer }),
-      });
-      if(snapshot.roundId !== submittedRound || ['results','scored','ended','closed','scoring','cancelled','canceled'].includes(snapshot.phase)){
-        await refresh();return;
-      }
-      snapshot = { ...snapshot, phase: "submitted", ownSubmission: { status: "submitted", answer } };
-      emit();
-    },
-    requestIdentityShare() {
-      if (typeof extension?.actions?.requestIdShare === "function") extension.actions.requestIdShare();
-      else renderEmpty("error", "Twitch identity is unavailable", "This identity prompt is only available inside a configured Twitch Extension.", null);
-    },
-    onVisibilityChanged,
-    dispose() { if (poll) clearInterval(poll); },
-  };
-}
-
 function connect() {
   if (!root) return;
   adapter = window.OVERLAY_PREVIEW_ADAPTER || createTwitchAdapter();
@@ -705,3 +525,5 @@ function connect() {
 
 window.StreamGameOverlay = Object.freeze({ connect, render });
 connect();
+
+window.addEventListener("pagehide", () => adapter?.dispose?.());

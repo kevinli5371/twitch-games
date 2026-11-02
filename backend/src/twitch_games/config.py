@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     docs_enabled: bool = True
     cors_origins: list[str] = []
     database_url: SecretStr | None = None
+    storage_backend: Literal["postgres", "supabase_http"] = "postgres"
+    supabase_url: str | None = None
+    test_supabase_http_url: str | None = None
+    supabase_secret_key: SecretStr | None = None
     database_connect_timeout_seconds: int = Field(default=3, ge=1, le=30)
     database_pool_size: int = Field(default=5, ge=1, le=20)
 
@@ -44,6 +48,7 @@ class Settings(BaseSettings):
         "twitch_extension_secret",
         "twitch_extension_owner_id",
         "token_encryption_key",
+        "supabase_secret_key",
         mode="before",
     )
     @classmethod
@@ -70,6 +75,19 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_twitch(self) -> "Settings":
+        if self.test_supabase_http_url:
+            parsed_test = urlsplit(self.test_supabase_http_url)
+            if (
+                self.environment != "test"
+                or parsed_test.scheme != "http"
+                or parsed_test.hostname not in {"localhost", "127.0.0.1"}
+                or parsed_test.username
+                or parsed_test.password
+                or parsed_test.path not in {"", "/"}
+                or parsed_test.query
+                or parsed_test.fragment
+            ):
+                raise ValueError("Supabase test transport is restricted to test-mode loopback")
         if self.test_twitch_base_url:
             parsed = urlsplit(self.test_twitch_base_url)
             if (
@@ -120,6 +138,33 @@ class Settings(BaseSettings):
         if self.twitch_extension_owner_id and not self.twitch_extension_owner_id.isdecimal():
             raise ValueError("Extension owner ID must be a numeric Twitch ID")
         return self
+
+    @field_validator("supabase_url")
+    @classmethod
+    def validate_supabase_url(cls, value):
+        if value is None or not value.strip():
+            return None
+        parsed = urlsplit(value)
+        if (
+            parsed.scheme != "https"
+            or not parsed.hostname
+            or not parsed.hostname.endswith(".supabase.co")
+            or parsed.username
+            or parsed.password
+            or parsed.path not in {"", "/"}
+            or parsed.query
+            or parsed.fragment
+            or parsed.port not in {None, 443}
+        ):
+            raise ValueError("Supabase URL must be an HTTPS project origin")
+        return value.rstrip("/")
+
+    @field_validator("supabase_secret_key")
+    @classmethod
+    def reject_public_api_key(cls, value):
+        if value and value.get_secret_value().startswith("sb_publishable_"):
+            raise ValueError("Supabase HTTP backend requires a server secret key")
+        return value
 
     @field_validator("database_url")
     @classmethod

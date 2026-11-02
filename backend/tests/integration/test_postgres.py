@@ -131,7 +131,7 @@ def test_current_migration_and_all_private_tables(database):
                 AND tablename <> 'alembic_version'
         """)
         ).all()
-        assert len(tables) == 19
+        assert len(tables) == 21
         assert all(rls for _, rls in tables)
 
 

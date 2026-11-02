@@ -214,6 +214,73 @@ class Auth:
         except (jwt.PyJWTError, ValueError, TypeError):
             raise GameError("unauthenticated", "Invalid or expired Extension token", 401) from None
 
+    def store_login(self, user, access, refresh, seconds, session, old):
+        with self.require_database().transaction() as c:
+            self.save_profile(c, user)
+            run(
+                c,
+                "INSERT INTO twitch_games.channels(id,display_name) VALUES (:id,:name) "
+                "ON CONFLICT(id) DO UPDATE SET display_name=excluded.display_name",
+                id=user["id"],
+                name=user["display_name"],
+            )
+            run(
+                c,
+                "INSERT INTO twitch_games.oauth_authorizations "
+                "(user_id,encrypted_access_token,encrypted_refresh_token,access_expires_at,"
+                "validated_at) "
+                "VALUES (:id,:access,:refresh,"
+                "clock_timestamp()+make_interval(secs=>:seconds),clock_timestamp()) "
+                "ON CONFLICT(user_id) DO UPDATE SET "
+                "encrypted_access_token=excluded.encrypted_access_token,"
+                "encrypted_refresh_token=excluded.encrypted_refresh_token,"
+                "access_expires_at=excluded.access_expires_at,"
+                "validated_at=excluded.validated_at,revoked_at=NULL",
+                id=user["id"],
+                access=self.cipher.encrypt(access.encode()).decode(),
+                refresh=self.cipher.encrypt(refresh.encode()).decode(),
+                seconds=seconds,
+            )
+            if old:
+                run(
+                    c,
+                    "DELETE FROM twitch_games.dashboard_sessions WHERE digest=:digest",
+                    digest=digest(old),
+                )
+            run(
+                c,
+                "INSERT INTO twitch_games.dashboard_sessions(digest,user_id,expires_at) "
+                "VALUES (:digest,:id,clock_timestamp()+interval '24 hours')",
+                digest=digest(session),
+                id=user["id"],
+            )
+
+    def new_oauth_state(self, state):
+        with self.require_database().transaction() as c:
+            run(
+                c,
+                "INSERT INTO twitch_games.oauth_states(digest,expires_at) "
+                "VALUES (:digest,now()+interval '10 minutes')",
+                digest=digest(state),
+            )
+
+    def consume_oauth_state(self, state):
+        with self.require_database().transaction() as c:
+            return one(
+                c,
+                "DELETE FROM twitch_games.oauth_states WHERE digest=:digest "
+                "AND expires_at>now() RETURNING digest",
+                digest=digest(state),
+            )
+
+    def logout_session(self, session):
+        with self.require_database().transaction() as c:
+            run(
+                c,
+                "DELETE FROM twitch_games.dashboard_sessions WHERE digest=:digest",
+                digest=digest(session),
+            )
+
     def save_profile(self, c, user):
         run(
             c,
@@ -388,16 +455,20 @@ class Auth:
             )
             granted = rows(
                 c,
-                "SELECT g.channel_id,c.display_name,array_agg(g.permission ORDER BY g.permission) "
+                "SELECT g.channel_id,c.display_name,u.login,"
+                "array_agg(g.permission ORDER BY g.permission) "
                 "AS permissions FROM twitch_games.moderator_grants g "
-                "JOIN twitch_games.channels c ON c.id=g.channel_id WHERE moderator_twitch_id=:id "
-                "GROUP BY g.channel_id,c.display_name ORDER BY g.channel_id",
+                "JOIN twitch_games.channels c ON c.id=g.channel_id "
+                "LEFT JOIN twitch_games.twitch_users u ON u.id=g.channel_id "
+                "WHERE moderator_twitch_id=:id "
+                "GROUP BY g.channel_id,c.display_name,u.login ORDER BY g.channel_id",
                 id=identity.user_id,
             )
             workspaces = [
                 {
                     "channel_id": identity.user_id,
                     "display_name": own["display_name"] if own else None,
+                    "login": profile["login"] if profile else None,
                     "role": "owner",
                     "permissions": ["live_control", "question_review", "settings"],
                 }
@@ -461,13 +532,7 @@ def login(request: Request):
     if not auth.settings.oauth_configured:
         raise GameError("not_configured", "Configure Twitch OAuth before logging in", 503)
     state = secrets.token_urlsafe(32)
-    with auth.require_database().transaction() as c:
-        run(
-            c,
-            "INSERT INTO twitch_games.oauth_states(digest,expires_at) "
-            "VALUES (:digest,now()+interval '10 minutes')",
-            digest=digest(state),
-        )
+    auth.new_oauth_state(state)
     response = RedirectResponse(
         auth.provider.oauth
         + "/authorize?"
@@ -503,13 +568,7 @@ def callback(request: Request, state: str = "", code: str = "", error: str | Non
         raise GameError("unauthenticated", "OAuth state is invalid", 401)
     if not auth.settings.oauth_configured:
         raise GameError("not_configured", "Configure Twitch OAuth before logging in", 503)
-    with auth.require_database().transaction() as c:
-        record = one(
-            c,
-            "DELETE FROM twitch_games.oauth_states WHERE digest=:digest "
-            "AND expires_at>now() RETURNING digest",
-            digest=digest(state),
-        )
+    record = auth.consume_oauth_state(state)
     if record is None:
         raise GameError("unauthenticated", "OAuth state expired or was already used", 401)
     if error or not code or len(code) > 2048:
@@ -525,46 +584,9 @@ def callback(request: Request, state: str = "", code: str = "", error: str | Non
     verified = auth.provider.validate(access)
     user = auth.provider.user(verified["user_id"], access)
     session = secrets.token_urlsafe(32)
-    with auth.database.transaction() as c:
-        auth.save_profile(c, user)
-        run(
-            c,
-            "INSERT INTO twitch_games.channels(id,display_name) VALUES (:id,:name) "
-            "ON CONFLICT(id) DO UPDATE SET display_name=excluded.display_name",
-            id=user["id"],
-            name=user["display_name"],
-        )
-        run(
-            c,
-            "INSERT INTO twitch_games.oauth_authorizations "
-            "(user_id,encrypted_access_token,encrypted_refresh_token,access_expires_at,"
-            "validated_at) "
-            "VALUES (:id,:access,:refresh,"
-            "clock_timestamp()+make_interval(secs=>:seconds),clock_timestamp()) "
-            "ON CONFLICT(user_id) DO UPDATE SET "
-            "encrypted_access_token=excluded.encrypted_access_token,"
-            "encrypted_refresh_token=excluded.encrypted_refresh_token,"
-            "access_expires_at=excluded.access_expires_at,"
-            "validated_at=excluded.validated_at,revoked_at=NULL",
-            id=user["id"],
-            access=auth.cipher.encrypt(access.encode()).decode(),
-            refresh=auth.cipher.encrypt(refresh.encode()).decode(),
-            seconds=verified["expires_in"],
-        )
-        old = request.cookies.get(SESSION_COOKIE)
-        if old:
-            run(
-                c,
-                "DELETE FROM twitch_games.dashboard_sessions WHERE digest=:digest",
-                digest=digest(old),
-            )
-        run(
-            c,
-            "INSERT INTO twitch_games.dashboard_sessions(digest,user_id,expires_at) "
-            "VALUES (:digest,:id,clock_timestamp()+interval '24 hours')",
-            digest=digest(session),
-            id=user["id"],
-        )
+    auth.store_login(
+        user, access, refresh, verified["expires_in"], session, request.cookies.get(SESSION_COOKIE)
+    )
     response = (
         RedirectResponse(auth.settings.dashboard_url, status_code=303)
         if auth.settings.dashboard_url
@@ -610,12 +632,7 @@ def logout(request: Request):
     auth.identity(request)
     session = request.cookies.get(SESSION_COOKIE)
     if session:
-        with auth.require_database().transaction() as c:
-            run(
-                c,
-                "DELETE FROM twitch_games.dashboard_sessions WHERE digest=:digest",
-                digest=digest(session),
-            )
+        auth.logout_session(session)
     response = Response(status_code=204)
     response.delete_cookie(SESSION_COOKIE)
     return response
