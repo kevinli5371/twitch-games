@@ -16,7 +16,7 @@ Only the minimized preference is saved in session storage (with an in-memory fal
 
 The owner authorized building the pixel direction on the existing overlay infrastructure. `viewer.html`, `mobile.html`, and `preview.html` now load `overlay-pixel.css` over the base stylesheet and `overlay-theme.js` alongside the existing `overlay.js` renderer. The local mobile workspace uses those same assets. The font and OFL license are bundled in `public/fonts/`; production assets do not import the design lab's fixture renderer or screen-gallery code.
 
-The shared renderer now includes per-mode pixel sprites/accents and instructions, round-progress blocks, locked receipts, revealed quote text, results and standings. All values still come from its adapter; no scoring/equivalence logic was introduced. Final standings render every entry supplied in the snapshot, rather than truncating to five; the backend's ability to supply a complete participant list remains a separate contract issue.
+The shared renderer now includes per-mode pixel sprites/accents and instructions, round-progress blocks when a round count is supplied, editable quote receipts, revealed quote text, results and standings. All values still come from its adapter; no scoring/equivalence logic was introduced. Final standings render every entry supplied in the snapshot, rather than truncating to five; the backend's ability to supply a complete participant list remains a separate contract issue.
 
 The skin defaults to light and follows the documented [`Twitch.ext.onContext` theme](https://dev.twitch.tv/docs/extensions/reference/#oncontext) when available. `?theme=light` / `?theme=dark` and the preview's Theme selector provide manual comparison. Real callback behavior has not been tested inside Twitch. Theme changes do not remount the form. The mobile composition omits the desktop Hide control.
 
@@ -24,7 +24,7 @@ In-memory drafts are scoped by game/round/mode and survive same-round snapshot r
 
 Observed: all 14 Node tests and `npm run check` pass. Three new adapter regressions cover late responses after round changes/results and failed requests never becoming receipts. Browser checks exercised draft preservation via Refresh snapshot, a submitted receipt, Niche's dark theme/results, a six-entry final board, and the 390px mobile composition. These are local fixture checks, not real Twitch/backend/device validation.
 
-**Integration limit:** this pass preserves the existing proposed viewer transport. Its `x-extension-jwt` header, camelCase snapshots, snapshot-bearing PubSub events, answer payloads and private final-result route still differ from the merged backend contract in `backend/docs/frontend-handoff.md`. The API base remains unconfigured. This UI work does not claim those contracts are reconciled, all modes exist in the backend, or live gameplay is working.
+**Connected integration:** PR #6 now depends on the connected client and HTTP-storage PRs. The renderer imports `api-adapter.mjs`, uses Bearer JWTs, the implemented snake_case state/private receipt contract and compact public version notices. Connected quote answers remain editable until the backend deadline; raw input is preserved and unknown round counts are not invented. Planning/other-mode screens remain labelled fixtures. Actual native Twitch delivery/captions and physical-device checks remain pending.
 
 - `public/preview.html` is the standalone visual/demo harness at the local server root. Its controls simulate streamer actions and use synthetic prompts, names, answers, and scores. It now renders the integrated pixel UI; the separate design lab/gallery remains at `/design/pixel.html` on the design server.
 - `public/viewer.html` and `public/mobile.html` are Twitch Extension entry points. Both include the Twitch Extension Helper, then the same viewer client. `viewer.html?demo=1` and `mobile.html?demo=1` use sample data for Twitch Local Test before the API is connected.
@@ -101,3 +101,7 @@ The public snapshot includes `overlayEnabled` (boolean, defaults to `true` for o
 - The viewer shows personal outcome/points and published standings. It never displays other players' raw answers.
 - The round count freezes when a game starts. Dashboard changes apply to the next game. Canceled rounds do not score or count toward that total.
 - Standings reset per game session. Equal cumulative scores share competition rank.
+
+## Combined PR review verification
+
+The combined stack passed 151 Python tests plus 10 subtests, real SQL and HTTP API checks for all 24 operations, and 21 Node tests. Browser interaction through real PostgREST with explicit Twitch fixtures verified light/dark Live game, preserved raw answer text, edit draft through compact/reopen, the 30-second close, 1/0 scoring for separate viewers, final standings and dashboard reload. The 390px mobile result had no horizontal overflow and loaded Silkscreen. Native Twitch/mobile hardware and public deployment remain pending.

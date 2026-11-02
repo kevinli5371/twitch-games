@@ -163,7 +163,7 @@ function addCardHeader(card, state) {
   const topline = element("div", "card-topline");
   const brand = element("div", "card-brand");
   brand.append(icon("brand-mark", ICONS.spark), element("span", "", state.isPreview ? "LOCAL PREVIEW" : "STREAM GAME"));
-  const phase = state.phase || state.round?.phase;
+  const phase = state.gameStatus === "ended" ? "ended" : state.phase || state.round?.phase;
   const statusLabel = phase === "ended" ? "Game ended" : phase === "cancelled" ? "Round canceled" : phase === "results" || phase === "scored" ? "Round results" : phase === "submitted" ? "Answer received" : "Round live";
   topline.append(brand, element("span", "live-status", statusLabel));
   topline.append(minimizeButton());
@@ -199,10 +199,12 @@ function addCardHeader(card, state) {
   meta.append(count, timer);
   if (["ended", "results", "scored", "closed", "scoring", "cancelled", "canceled"].includes(phase)) timer.hidden = true;
   inner.append(meta);
-  const progress = element('div', 'round-progress');progress.setAttribute('aria-hidden', 'true');
-  const rounds = Math.min(20, Math.max(1, Number(state.roundCount) || 5));
-  for(let i=0;i<rounds;i++)progress.append(element('i', phase==='ended' || i < (Number(state.roundNumber)||1) ? 'is-done' : ''));
-  inner.append(progress);
+  if (Number.isInteger(state.roundCount) && state.roundCount > 0) {
+    const progress = element('div', 'round-progress');progress.setAttribute('aria-hidden', 'true');
+    const rounds = Math.min(20, state.roundCount);
+    for(let i=0;i<rounds;i++)progress.append(element('i', phase==='ended' || i < (Number(state.roundNumber)||1) ? 'is-done' : ''));
+    inner.append(progress);
+  }
   card.append(inner);
   return inner;
 }
