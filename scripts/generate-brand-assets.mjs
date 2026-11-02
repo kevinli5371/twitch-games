@@ -30,8 +30,8 @@ function wordmark() {
 }
 
 function svg({ full, theme }) {
-  const transparent = theme === 'transparent';
-  const dark = theme === 'dark';
+  const transparent = theme.includes('transparent');
+  const dark = theme.startsWith('dark');
   const width = full ? 928 : 160;
   const height = full ? 240 : 160;
   const label = `Twillion ${full ? 'full logo' : 'mascot icon'} — ${theme}`;
@@ -51,7 +51,7 @@ function svg({ full, theme }) {
 const output = new URL('../public/brand/', import.meta.url);
 await mkdir(output, { recursive: true });
 for (const full of [false, true]) {
-  for (const theme of ['light', 'dark', 'transparent']) {
+  for (const theme of ['light', 'dark', 'transparent', ...(full ? ['dark-transparent'] : [])]) {
     const filename = `twillion-${full ? 'logo' : 'icon'}-${theme}.svg`;
     await writeFile(new URL(filename, output), svg({ full, theme }));
     console.log(fileURLToPath(new URL(filename, output)));

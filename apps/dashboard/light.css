@@ -57,3 +57,6 @@
 [data-theme=light] footer{color:#82708f}
 [data-theme=light] button:focus-visible,[data-theme=light] a:focus-visible,[data-theme=light] input:focus-visible,[data-theme=light] select:focus-visible,[data-theme=light] textarea:focus-visible{outline-color:#7844ae}
 @media(max-width:740px){.workspace-tools{gap:9px;flex-wrap:wrap;justify-content:flex-end;flex-shrink:1}.theme-toggle{min-height:40px}.preview-banner>span{max-width:none;flex:1}}
+
+/* Approved Twillion SVG branding, transparent to match either surface. */
+.brand{flex-shrink:0}.brand-logo{display:block;width:139px;height:36px;object-fit:contain}.brand-logo-light{display:none}[data-theme=light] .brand-logo-light{display:block}[data-theme=light] .brand-logo-dark{display:none}
