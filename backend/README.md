@@ -12,6 +12,8 @@ The runtime deliberately returns **503 from readiness**, because the game depend
 
 The [implementation plan](docs/implementation-plan.md) records the owner's step-by-step approval requirement. Step 2 must wait for a new green light.
 
+Each step also requires agent-run real-server and relevant live integration checks wherever feasible, with commands/results documented separately from unit tests. The owner should not need to manually repeat checks that can be automated. Missing external credentials or test resources must be disclosed explicitly.
+
 ## Product decisions carried forward
 
 - Desktop: native Twitch Extension over the video, not a browser extension or OBS graphics.

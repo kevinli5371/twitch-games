@@ -15,6 +15,18 @@ The owner approved this sequence and gave a green light for **Step 1 only** on N
 
 All new files live under `backend/`. No database, OAuth, caption collector, game endpoint, scoring engine or deployment is implemented by Step 1.
 
+## Live verification after every step
+
+The owner requested automatic live checks wherever feasible so they do not need to manually run verification. Before presenting a step for review:
+
+1. Run the relevant automated tests and a real server/process check for the delivered behavior. Exercise actual HTTP endpoints where available.
+2. Exercise real configured dependencies relevant to the step: PostgreSQL/Supabase transactions and persistence, Twitch authentication/captions, and later the connected application surfaces. Use isolated test records/resources and clean them up; do not alter unrelated data.
+3. Keep the checks repeatable under `backend/scripts/` or integration tests. Record the commands, actual responses/results, and cleanup status in that step's verification report.
+4. Distinguish unit tests, in-process HTTP tests, real-process HTTP tests, and external-service/device tests. A real local server check does not establish live Twitch or hosted Supabase behavior.
+5. If external credentials or a test channel/device are unavailable, complete independent checks and report the exact gap. Do not claim full verification or require the owner to run checks the agent can run itself.
+
+Step 1 already includes `scripts/smoke_test.py`, which starts a real loopback-only Uvicorn process, tests liveness/readiness/docs and the missing game route, then shuts down. Future steps extend or add scripts for their actual functionality. Owner review remains a green-light decision rather than a request to repeat these checks manually.
+
 ## Current technical decisions
 
 - FastAPI with validated Python contracts; Supabase PostgreSQL supplies durable storage later.
