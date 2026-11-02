@@ -67,3 +67,29 @@ test('gateway rejects non-loopback upstream configuration', () => {
     assert.throws(() => createExtensionGateway({apiOrigin}));
   }
 });
+
+test('offline demo redirects native entrypoints, preserves Twitch context and never forwards API calls', async () => {
+  let calls = 0;
+  const upstream = http.createServer((_req, res) => { calls++; res.end('{}'); });
+  const apiOrigin = await listen(upstream);
+  const gateway = createExtensionGateway({apiOrigin, demoMode:true});
+  const base = await listen(gateway);
+  try {
+    for (const path of ['/viewer.html', '/mobile.html']) {
+      const r = await fetch(base+path+'?anchor=video_overlay&language=en', {redirect:'manual'});
+      assert.equal(r.status, 307);
+      const next = new URL(r.headers.get('location'), base);
+      assert.equal(next.searchParams.get('demo'), '1');
+      assert.equal(next.searchParams.get('anchor'), 'video_overlay');
+      const page = await fetch(next); assert.equal(page.status, 200); await page.text();
+    }
+    for (const path of ['/preview.html','/preview.js']) {
+      const r = await fetch(base+path); assert.equal(r.status, 200); await r.text();
+    }
+    for (const path of ['/api/v1/channels/1602828445/game-state', `/api/v1/rounds/${round}/answers`]) {
+      const r = await fetch(base+path,{headers:{Authorization:'Bearer fixture'}});
+      assert.equal(r.status,503); assert.equal((await r.json()).error.code,'demo_mode_no_backend');
+    }
+    assert.equal(calls,0);
+  } finally { await close(gateway); await close(upstream); }
+});

@@ -22,7 +22,7 @@ function reply(res, status, code) {
   res.end(JSON.stringify({error: {code, message: code.replaceAll('_', ' ')}}));
 }
 
-export function createExtensionGateway({apiOrigin = 'http://127.0.0.1:8000'} = {}) {
+export function createExtensionGateway({apiOrigin = 'http://127.0.0.1:8000', demoMode = false} = {}) {
   const origin = new URL(apiOrigin);
   if (origin.protocol !== 'http:' || !['127.0.0.1', 'localhost'].includes(origin.hostname)
       || origin.username || origin.password || origin.pathname !== '/' || origin.search || origin.hash) {
@@ -34,7 +34,15 @@ export function createExtensionGateway({apiOrigin = 'http://127.0.0.1:8000'} = {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     // Match raw paths, without normalizing encoded traversal into an allowed route.
     const path = (req.url || '').split('?')[0];
-    if (assets.has(path) && ['GET', 'HEAD'].includes(req.method)) {
+    if (demoMode && ['GET', 'HEAD'].includes(req.method) && ['/viewer.html', '/mobile.html'].includes(path)) {
+      const url = new URL(req.url, 'http://localhost');
+      if (url.searchParams.get('demo') !== '1') {
+        url.searchParams.set('demo', '1');
+        res.writeHead(307, {Location: url.pathname + url.search}); res.end(); return;
+      }
+    }
+    if (demoMode && path.startsWith('/api/')) return reply(res, 503, 'demo_mode_no_backend');
+    if ((assets.has(path) || (demoMode && ['/preview.html', '/preview.js'].includes(path))) && ['GET', 'HEAD'].includes(req.method)) {
       await serveAsset(req, res);
       return;
     }
@@ -84,7 +92,8 @@ export function createExtensionGateway({apiOrigin = 'http://127.0.0.1:8000'} = {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const port = Number(process.env.PORT || 4176);
   if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error('Invalid PORT');
-  createExtensionGateway({apiOrigin: process.env.API_ORIGIN}).listen(port, '127.0.0.1', () => {
+  createExtensionGateway({apiOrigin: process.env.API_ORIGIN, demoMode: process.env.EXTENSION_DEMO_MODE === '1'}).listen(port, '127.0.0.1', () => {
+    console.log(`Mode: ${process.env.EXTENSION_DEMO_MODE === '1' ? 'SAMPLE DATA ONLY · no backend forwarding' : 'connected viewer'}`);
     console.log(`Extension-only gateway ready at http://127.0.0.1:${port}; no public tunnel started.`);
   });
 }

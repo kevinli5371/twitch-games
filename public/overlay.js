@@ -325,7 +325,7 @@ function renderSubmitted(state) {
     echo.append(icon("", ICONS.check), element("span", "", state.ownSubmission.answer));
     panel.append(echo);
   }
-  if (state.canEdit) panel.append(button("Edit answer", "retry-button", () => render({...state, ownSubmission:null, editingAnswer:state.ownSubmission?.answer || ""})));
+  if (state.canEdit) panel.append(button("Edit answer", "retry-button", () => render({...state, phase:"answering", ownSubmission:null, editingAnswer:state.ownSubmission?.answer || ""})));
   panel.append(element("p", "card-footnote", state.canEdit ? "Edit until time ends · No speed bonus" : "One final answer · No edits after sending"));
   if(state.isPreview)panel.append(element('p','card-footnote','Simulated receipt · nothing sent to Twitch.'));
   inner.append(panel);

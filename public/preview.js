@@ -64,6 +64,7 @@
       isPreview: true,
       overlayEnabled: streamerOverlayEnabled,
       identityLinked: true,
+      canEdit: true,
       gameId: `local-sample-game-${gameNumber}`,
       gameStatus: phase === "ended" ? "ended" : "active",
       mode,

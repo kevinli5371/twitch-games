@@ -2,6 +2,9 @@
   const params = new URLSearchParams(window.location.search);
   if (params.get("demo") !== "1") return;
 
+  // Complete the native Twitch helper handshake without using its token or the API.
+  window.Twitch?.ext?.onAuthorized?.(() => {});
+
   const modes = {
     quote: {
       prompt: "I cannot believe we won with a ____.",
@@ -23,6 +26,7 @@
   let state = {
     isPreview: true,
     identityLinked: true,
+    canEdit: true,
     status: "active",
     gameId: "local-twitch-demo",
     gameStatus: "active",
@@ -72,6 +76,7 @@
   window.OVERLAY_PREVIEW_ADAPTER = {
     subscribe(listener) { listeners.add(listener); listener(state); return () => listeners.delete(listener); },
     async submit(answer) {
+      if (!["answering", "submitted"].includes(state.phase) || Date.now() >= new Date(state.deadlineAt).getTime()) throw new Error("The sample round has closed.");
       state = { ...state, phase: "submitted", ownSubmission: { status: "submitted", answer } };
       emit();
     },
