@@ -1,4 +1,4 @@
-# Supabase HTTPS migration — in progress
+# Supabase HTTPS storage
 
 The owner requested switching runtime storage to the Supabase project URL and server secret key on November 2, 2026. This does not introduce Supabase Auth or browser access to private data.
 
@@ -9,7 +9,7 @@ The owner requested switching runtime storage to the Supabase project URL and se
 - Migration `0005_http_rpc` adds private worker claims/generation jobs and a fixed-operation backend RPC. Private tables remain unexposed; only service_role may execute the RPC. No arbitrary SQL endpoint or Supabase Auth is introduced.
 - Docker PostgreSQL migration up/repeat/down/up passed. Real PostgREST denied anonymous/authenticated RPC access. SQL and HTTP storage passed the real HTTP suite, including all 24 API operations and the actual dashboard/viewer JavaScript round.
 - Additional HTTP checks passed 105 concurrent submissions, retry identity, rollback, duplicate-scoring prevention, own rank 101, refresh fencing and immediate grant revocation. A deliberate transient startup RPC failure recovered; readiness waits for active workers. Quote generation has its own recovery loop so it cannot hold up timers.
-- Hosted RPC installation is still pending. The running local app has **not** been switched to HTTP mode; do not claim the real hosted gameplay flow is complete from gateway credentials or Docker tests.
+- The owner applied the hosted SQL migration. The real API verified revision `0005_http_rpc` and service-key function execution. A hosted insert/consume/replay probe passed and its record was removed. Local FastAPI is now running with `storage_backend=supabase_http`; liveness/readiness return 200. The existing kevinli16 dashboard session restored through HTTP storage, an ungranted workspace was denied, and a real stream-connect call correctly reported the channel offline. A complete hosted broadcast/viewer round remains pending the caption-enabled test stream.
 
 ## Apply and activate
 
@@ -18,10 +18,10 @@ The owner requested switching runtime storage to the Supabase project URL and se
 After installation:
 
 ```sh
-.venv/bin/python scripts/check_supabase_http.py --require-rpc
+.venv/bin/python scripts/check_supabase_http.py --require-rpc --exercise-writes
 ```
 
-Then set `TWITCH_GAMES_STORAGE_BACKEND=supabase_http` in local backend configuration and restart FastAPI. Runtime uses the HTTPS project URL and server secret; a database URI is only needed for migration tooling/SQL-mode rollback. No Twitch/encryption keys change. Verify the hosted ready endpoint, existing dashboard session and an isolated hosted game before declaring the switch complete. Never point disposable Docker downgrade/test scripts at Supabase.
+Then set `TWITCH_GAMES_STORAGE_BACKEND=supabase_http` in local backend configuration and restart FastAPI. Runtime uses the HTTPS project URL and server secret; a database URI is only needed for migration tooling/SQL-mode rollback. No Twitch/encryption keys change. Verify readiness and the existing dashboard session after activation; keep a complete hosted game explicitly pending until an actual caption-enabled stream and viewer are available. Do not substitute a fabricated broadcast for that check. Never point disposable Docker downgrade/test scripts at Supabase.
 
 ## Transaction boundaries to port
 

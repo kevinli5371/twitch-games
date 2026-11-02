@@ -56,4 +56,4 @@ Real Twitch browser OAuth, verified identity, cross-workspace denial and refresh
 
 ## Supabase HTTPS change
 
-The owner subsequently selected project URL + server secret for runtime storage. The complete HTTP adapter and atomic RPC migration pass isolated PostgreSQL/PostgREST verification; the real gateway accepts the key. Hosted RPC installation/activation remains pending. See supabase-http-migration.md for exact implementation, migration and deployment status. This keeps Twitch auth and the agreed quote policies unchanged.
+The owner subsequently selected project URL + server secret for runtime storage. The complete HTTP adapter and atomic RPC migration pass isolated PostgreSQL/PostgREST verification; the real gateway accepts the key. Hosted RPC installation and HTTP-mode activation are now verified, including ready API, a removable hosted write probe and real dashboard session restoration. The actual caption-enabled stream/installed Extension E2E remains pending. See supabase-http-migration.md for exact implementation, migration and deployment status. This keeps Twitch auth and the agreed quote policies unchanged.

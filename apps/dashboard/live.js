@@ -38,7 +38,10 @@ function renderIdentity(identity) {
   $('live-team').hidden = workspace.role !== 'owner';
 }
 function renderSnapshot() {
-  if (!snapshot) return;
+  if (!snapshot) {
+    for (const id of ["live-start","live-round","live-end","live-connect"]) $(id).disabled = true;
+    return;
+  }
   const game = snapshot.game, round = game.round, answering = round?.phase === 'answering';
   text('live-phase',game.status+' · '+(round?.phase || 'no round'));
   text('live-prompt',round?.phase === 'results' ? round.complete_quote+' — '+round.canonical_answer : round?.prompt || (game.status === 'active' ? 'Open a round to select the next quote.' : 'No game is running.'));
@@ -112,7 +115,7 @@ $('live-round').addEventListener('click',() => action(() => api.command('/games/
 $('live-end').addEventListener('click',() => action(() => api.command('/games/'+snapshot.game.game_id+'/end',snapshot.game.version)));
 $('live-refresh').addEventListener('click',() => { error(''); refresh(); });
 $('live-logout').addEventListener('click',() => action(async () => { await api.logout(); signedOut(); }));
-$('live-workspace').addEventListener('change',() => { epoch++; stopCapture(); snapshot = null; channel = $('live-workspace').value; refresh(); });
+$('live-workspace').addEventListener('change',() => { epoch++; stopCapture(); snapshot = null; renderSnapshot(); channel = $('live-workspace').value; refresh(); });
 async function loadSettings() {
   const workspaceChannel = channel, currentEpoch = epoch;
   if (api.allowed('question_review')) {

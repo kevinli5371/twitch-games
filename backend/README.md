@@ -27,7 +27,7 @@ The owner subsequently confirmed moderator access: `question_review` may see unr
 
 ## Supabase HTTPS storage
 
-The owner selected project URL + server secret for runtime connectivity. Install tested migration `0005_http_rpc` before setting `TWITCH_GAMES_STORAGE_BACKEND=supabase_http`. See [migration/setup and verification](docs/supabase-http-migration.md) and [SQL-editor install](docs/supabase-http-install.sql). The hosted gateway has accepted the configured key; hosted RPC installation/activation is still pending. SQL mode remains available for local Docker tests and migration tooling. Existing game and Twitch authentication contracts are unchanged.
+The owner selected project URL + server secret for runtime connectivity. Install tested migration `0005_http_rpc` before setting `TWITCH_GAMES_STORAGE_BACKEND=supabase_http`. See [migration/setup and verification](docs/supabase-http-migration.md) and [SQL-editor install](docs/supabase-http-install.sql). Hosted RPC installation, a removable HTTPS write probe and activation are verified. The local API returns ready and the real signed-in dashboard session works through HTTP storage. A complete Twitch broadcast/installed-viewer round remains pending. SQL mode remains available for local Docker tests and migration tooling. Existing game and Twitch authentication contracts are unchanged.
 
 ## Setup
 
