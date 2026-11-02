@@ -6,7 +6,7 @@ This specification captures the agreed product and proposes an architecture for 
 
 ## 0. Start here: context for a fresh implementation agent
 
-The repository is `kevinli5371/twitch-games`. The owner is building a project for the **Codex x TwitchCon Hackathon**. Its product is live, stream-specific audience games controlled by the streamer. The name “Stream Quote Game” in this document describes the initial mode; a final product/brand name has not been selected.
+The repository is `kevinli5371/twitch-games`. The owner is building a project for the **Codex x TwitchCon Hackathon**. Its product is live, stream-specific audience games controlled by the streamer. The owner selected **Twillion** on November 2, 2026 and requested a distinctive pixel-head mascot logo. “Stream Quote Game” describes the initial mode. Editable SVG brand assets are documented in [public/brand](../public/brand/README.md); UI-wide brand replacement is separate from preparing the assets.
 
 **Repository baseline:** the remote repository was empty when this specification was first added. The repo now has a local overlay preview and Twitch viewer/mobile HTML shells, plus a fixture dashboard and backend foundation. The backend URL is unconfigured; live API calls and Twitch Local Test have not been validated. No deployed playable game service or verified caption feed is supplied. Do not interpret plans as implemented features. External account setup should not be presumed absent or complete.
 

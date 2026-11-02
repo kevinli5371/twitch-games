@@ -2,6 +2,8 @@
 
 A native Twitch Extension, streamer dashboard and FastAPI/PostgreSQL backend. **Quote mode is connected across all three components.** The broader product plan includes Niche and Hive Mind; their workflow/visual previews remain separate from the working quote runtime.
 
+The owner-selected app name is **Twillion**. Editable mascot-only and full-logo SVGs are in [public/brand](public/brand/README.md), with light, dark and transparent variants. Run the design server and open `http://127.0.0.1:4175/brand/index.html` to preview them. Wordmark letters are outlined paths, with no font or bitmap dependency. These assets are committed for use; dashboard/overlay branding has not yet been replaced.
+
 ## Run the connected app
 
 Start FastAPI from `backend/` using its [setup guide](backend/README.md), then run from the repository root:
