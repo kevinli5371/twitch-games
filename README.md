@@ -12,6 +12,24 @@ The broader three-mode product plan and UI fixtures below are separate from the 
 
 ## Viewer overlay preview and Twitch Local Test
 
+### Local design workspace
+
+Run `npm run dev:design` and open `http://127.0.0.1:4175/` to review the desktop overlay, separate mobile composition, and dashboard together. No certificates, package installation, Twitch login, or backend are needed. Set `PORT` to override the port.
+
+The workspace provides surface switching, full-preview links, and fluid/1280px/390px width controls. It reuses the existing independent fixtures: dashboard actions do not drive the viewer. The mobile composition omits the Twitch Helper and uses only synthetic local data. This HTTP server binds to loopback, serves only the three UI directories, and is for local visual design; Twitch Local Test continues to use the HTTPS setup below. Design-workspace files live outside the viewer asset directory.
+
+The source documents and merged quote runtime differ on mode scope, submission editing, progression, and scoring. Visual exploration does not resolve those differences or establish backend integration/device validation.
+
+Observed November 2, 2026 for this workspace: all 11 Node tests, existing viewer syntax checks, new workspace/server syntax checks, and `git diff --check` pass. Browser review verified switching among desktop, mobile (390px), and dashboard previews, including their rendered sample content. The route test checks that private project paths are unavailable. No live Twitch or backend checks were performed for this design setup.
+
+The dashboard now uses the owner's Outcrowd design reference, with horizontal pill navigation, compact metrics, violet bank visualizations and a purple next-step card. Two independent skeptic review passes checked the visual style, local workflows, copy and 390px layout; reported usability issues were fixed and rechecked. See [dashboard design review](docs/dashboard-design-review.md) for evidence and limitations.
+
+The dashboard now defaults to light mode, with a Dark mode / Light mode switch beside the preview status. Light overview/bank rendering and theme switching were browser-checked. The overlay's minimize/reopen cycle was rechecked before PR publication; the separate Hide restore button is now anchored inside the simulated player instead of the whole page. All 14 Node tests and syntax/diff checks pass. These remain local UI checks.
+
+A [pixel overlay exploration](docs/pixel-overlay-design.md) is available at `http://127.0.0.1:4175/design/pixel.html`. It includes 12 screen mockups across all three games, a clickable desktop/mobile flow, interim/final standings, and sample failure/permission states. Its Integrated viewer link opens the subsequent implementation on the shared overlay renderer. Timers, receipts and outcomes in the lab are illustrative; no real answers are evaluated. Browser checks and the 11 existing Node tests passed for the initial exploration.
+
+The pixel lab defaults to a light theme for comparison with Twitch's white UI. Use the header's Light/Dark controls or `?theme=light` / `?theme=dark`; changing themes preserves the active draft. Both desktop and mobile compositions and the screen gallery share the theme.
+
 Requires Node.js 20+ and OpenSSL (included with macOS). No package install is needed.
 
 Create and trust the local development certificate once:
@@ -44,6 +62,9 @@ Open `http://127.0.0.1:4173/`. If the port is occupied, set `PORT` to another po
 
 ## Current implementation status
 
+- Viewers can collapse the pixel card to a small **Just watching · Open game** tab using the **−** control. The choice persists for the browser tab's session and does not reopen on round changes. Restoring preserves the current draft/receipt state. Channel-wide hiding suppresses the compact tab; desktop Hide remains a separate native Twitch action. Local browser checks verified collapse/restore, draft preservation, mode changes, channel visibility and refresh persistence. No native Twitch/device verification was performed.
+- The pixel UI is now implemented on the existing desktop/mobile viewer renderer, with locally bundled font/sprites, mode accents, light/dark themes, receipts, revealed quotes and standings. Review it at `http://127.0.0.1:4175/preview.html` using `npm run dev:design`. The Twitch Helper theme callback is connected but not live-platform tested. Same-round drafts survive snapshot re-renders; pending submissions show Sending and late receipts cannot overwrite a new round/results. Final boards show all entries supplied by the snapshot. See [viewer UI integration](docs/viewer-overlay.md).
+- Observed November 2 for this integration: all 14 Node tests, `npm run check`, and `git diff --check` pass. Browser checks covered all three mode presentations across the preview/mobile fixtures, light/dark styling, draft preservation, submission receipt, six-entry final standings, and a 390px mobile layout. No live Twitch/backend/device test was performed.
 - The local overlay preview and Twitch viewer/mobile asset shells are implemented.
 - The Extension uses Twitch's Extension Helper identity callback, private HTTPS snapshot/submission calls, and Extension PubSub updates. A viewer can minimize the overlay for themselves; the streamer dashboard/backend handoff includes a channel-wide visibility flag.
 - The backend URL is blank, and live API calls, Twitch Local Test, and device behavior have not been verified. The local demo is not live gameplay.

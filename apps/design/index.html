@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Stream Games · Design workspace</title>
+  <link rel="stylesheet" href="workspace.css">
+  <script src="workspace.js" defer></script>
+</head>
+<body>
+  <header>
+    <div class="brand"><span class="mark" aria-hidden="true">✦</span><strong>stream games</strong><span class="badge">DESIGN WORKSPACE</span></div>
+    <a id="open-preview" href="/preview.html" target="_blank" rel="noopener">Open full preview ↗</a>
+  </header>
+  <main>
+    <div class="intro"><div><p class="eyebrow">ONE GAME. TWO PERSPECTIVES.</p><h1>A place to shape the experience.</h1><p>Explore the viewer card and streamer workspace, then refine them together.</p></div><span class="sample">Sample data · local only</span></div>
+    <nav aria-label="Design surfaces">
+      <button type="button" data-surface="overlay" aria-pressed="true">01 <strong>Twitch overlay</strong><small>Play along without losing the stream</small></button>
+      <button type="button" data-surface="mobile" aria-pressed="false">02 <strong>Mobile view</strong><small>A separate vertical composition</small></button>
+      <button type="button" data-surface="dashboard" aria-pressed="false">03 <strong>Streamer dashboard</strong><small>Prepare questions and manage games</small></button>
+    </nav>
+    <section class="preview-panel" aria-label="Selected design preview">
+      <div class="preview-toolbar"><div><strong id="surface-title">Desktop overlay</strong><span id="surface-note">Try all three modes and answering, submitted, and results states below the stream.</span></div><label>Preview width<select id="viewport"><option value="fluid">Fill workspace</option><option value="desktop">Desktop · 1280px</option><option value="phone">Phone · 390px</option></select></label></div>
+      <div class="canvas"><iframe id="preview" src="/preview.html" title="Desktop overlay design preview"></iframe></div>
+    </section>
+  <footer><p><a href="pixel.html">Explore the pixel overlay direction ↗</a><br>Visual prototypes use independent fixtures. Dashboard actions do not control the viewer preview.</p><p>Game rules differ across current implementations; this workspace does not settle those decisions. Mobile sizing here is a browser preview.</p></footer>
+  </main>
+</body>
+</html>
