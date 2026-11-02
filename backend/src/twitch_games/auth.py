@@ -388,16 +388,20 @@ class Auth:
             )
             granted = rows(
                 c,
-                "SELECT g.channel_id,c.display_name,array_agg(g.permission ORDER BY g.permission) "
+                "SELECT g.channel_id,c.display_name,u.login,"
+                "array_agg(g.permission ORDER BY g.permission) "
                 "AS permissions FROM twitch_games.moderator_grants g "
-                "JOIN twitch_games.channels c ON c.id=g.channel_id WHERE moderator_twitch_id=:id "
-                "GROUP BY g.channel_id,c.display_name ORDER BY g.channel_id",
+                "JOIN twitch_games.channels c ON c.id=g.channel_id "
+                "LEFT JOIN twitch_games.twitch_users u ON u.id=g.channel_id "
+                "WHERE moderator_twitch_id=:id "
+                "GROUP BY g.channel_id,c.display_name,u.login ORDER BY g.channel_id",
                 id=identity.user_id,
             )
             workspaces = [
                 {
                     "channel_id": identity.user_id,
                     "display_name": own["display_name"] if own else None,
+                    "login": profile["login"] if profile else None,
                     "role": "owner",
                     "permissions": ["live_control", "question_review", "settings"],
                 }

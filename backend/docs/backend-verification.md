@@ -46,3 +46,9 @@ Merged main at `9b16fec` (PR #1), preserved its dashboard and pure planning util
 ## Deferred live E2E boundary
 
 The owner approved backend merge on November 2 with full Twitch/frontend E2E deferred until the caption-enabled test stream is ready. Main’s dashboard and viewer assets are preserved. Their presence does not verify caption collection or API compatibility; the viewer still uses a proposed contract that differs from the implemented handoff. These checks remain pending after merge.
+
+## Connected client verification
+
+The actual dashboard API client, caption queue and viewer adapter now run against Uvicorn/PostgreSQL in `scripts/fullstack_clients.mjs`, invoked by the Docker verification suite. A real 30-second quote round verifies private edits, scoring, state restoration, final standings and logout. A disposable browser check also exercised the actual dashboard and two viewer UIs (correct and incorrect outcomes), reload and the mobile entry at 390px. Twitch identity/captions in these checks remain explicit fixtures. See root `docs/fullstack-integration.md` for current setup and remaining real Twitch/deployment checks.
+
+A later read-only hosted connectivity check found the configured direct host has an IPv6 DNS record, but this machine returns `EHOSTUNREACH` for IPv6 TCP; authentication is not reached. The previously successful hosted checks are historical observations, not a claim of current connectivity. Session-pooler configuration is pending.

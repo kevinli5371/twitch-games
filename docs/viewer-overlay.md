@@ -1,5 +1,7 @@
 # Viewer overlay implementation
 
+**Integration update — November 2:** the real viewer now uses the implemented FastAPI contract described in [fullstack-integration.md](fullstack-integration.md). The proposed wire schema below is historical; `public/api-adapter.mjs` and the backend handoff are the actual contract. Local HTTPS now defaults to port 4174; `/preview.html` is the in-memory simulator and `/` is the connected dashboard. Use no `demo=1` for connected play.
+
 This workstream contains the viewer-facing game card. The streamer dashboard and backend implementation are owned separately.
 
 ## Current state

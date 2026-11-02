@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Thread
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import parse_qs, urlencode, urlsplit
 
 
 @contextmanager
@@ -35,6 +35,21 @@ def twitch_fixture():
 
         def do_GET(self):
             parsed = urlsplit(self.path)
+            if parsed.path == "/oauth2/authorize":
+                params = parse_qs(parsed.query)
+                target = params.get("redirect_uri", [""])[0]
+                destination = urlsplit(target)
+                if destination.hostname not in {"localhost", "127.0.0.1"}:
+                    return self.reply(400, {})
+                self.send_response(302)
+                self.send_header(
+                    "Location",
+                    target
+                    + "?"
+                    + urlencode({"code": "90001", "state": params.get("state", [""])[0]}),
+                )
+                self.end_headers()
+                return
             if parsed.path == "/oauth2/validate":
                 token = self.headers.get("Authorization", "").split(" ")[-1]
                 if token == "fixture-app-token":
