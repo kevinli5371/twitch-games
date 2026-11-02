@@ -68,7 +68,7 @@ For uploaded/hosted Extension assets, set the public HTTPS API base in `public/e
 
 ## Verification actually observed
 
-- 144 Python tests plus 10 subtests against isolated PostgreSQL; 16 Node tests; syntax, Ruff/format and diff checks.
+- 151 Python tests plus 10 subtests against isolated PostgreSQL; 16 Node tests; syntax, Ruff/format and diff checks.
 - All 24 backend operations retain successful real HTTP cases.
 - The verification suite now executes the actual dashboard API client, caption queue and viewer adapter against real Uvicorn/PostgreSQL. It checks OAuth/cookies/CSRF, verified workspace login, intake, prompt mapping, private submission/edit, a real 30-second window, scoring, restored state, final board and logout.
 - Browser UI check: signed in through fixture OAuth; connected a visible fixture player; sent synthetic captions; started/opened a round; one desktop viewer submitted and edited a correct answer, a separate mobile-entry viewer submitted an incorrect one. Both received their own outcome (1 and 0 points), the same board, and final standings after the dashboard ended the game. Reload restored the result. Mobile entry rendered at 390 × 844 without horizontal overflow.
@@ -78,8 +78,15 @@ Repeat from `backend/` with `.venv/bin/python scripts/postgres_checks.py` (Docke
 
 ## Current external prerequisites
 
-The configured Supabase direct hostname has an AAAA record but IPv6 TCP currently fails with `EHOSTUNREACH` on this machine. This is a network-path problem before password authentication, not evidence of key rotation. Obtain the **Session pooler** URI from Supabase's Connect dialog for IPv4 connectivity; copy its exact host/username, retain the database password, percent-encode it and keep TLS enabled. No code guesses the pooler hostname. See [Supabase connections](https://supabase.com/docs/guides/database/connecting-to-postgres).
+The original direct PostgreSQL connection failed on this machine's IPv6 route. The owner selected Supabase HTTPS project URL + server secret instead; migration and activation are now verified as described below. Runtime does not use the direct database URI. A session-pooler URI is an optional route for SQL migration tools, not a requirement for the active HTTP runtime. See [Supabase connections](https://supabase.com/docs/guides/database/connecting-to-postgres).
 
 A caption-enabled test stream is still needed for real capture. Twitch captions are conditional; the collector listens for the documented string payload from a visible player. See [Twitch player events](https://dev.twitch.tv/docs/embed/video-and-clips/#javascript-events). Live installed Extension/device verification remains pending. Actual earlier Twitch OAuth/refresh and hosted Supabase checks are recorded separately in `backend/docs/backend-verification.md`.
 
+## Subsequent HTTP-storage migration
+
+The owner selected Supabase project URL + server secret instead of the direct IPv6 connection. A backend-only transactional HTTP/RPC adapter is now locally verified, including the same dashboard/viewer JS round and all API operations. The real gateway accepts the configured key. Hosted RPC installation and local HTTP-mode activation are verified, including a removable write, ready API, restored real dashboard session and workspace denial. A full hosted broadcast/viewer round remains pending; see [migration instructions and evidence](../backend/docs/supabase-http-migration.md). Frontend URLs, session/CSRF rules and viewer JWTs are unchanged; no Supabase secret belongs in either client.
+
+## Offline browser verification update
+
+Real Twitch sign-in/sign-out/sign-in and hosted HTTP-storage dashboard restoration passed. Two browser games also passed through disposable PostgreSQL + real PostgREST, including aliases, answer edits/reload, incorrect answers, spelling tolerance, a 390px mobile view and score reset. Fallback polling was disabled in the fixture response to verify public-notice-driven state updates. These game scenarios use explicit Twitch fixtures; native Twitch delivery and real captions remain pending. See [the detailed evidence and limits](../backend/docs/e2e-without-stream.md). The browser harness now defaults to HTTP storage and supports `--smoke` to check startup, HTTP surfaces and cleanup.
 PR review: native viewer/mobile HTML use relative bundled-asset URLs so a Twitch CDN extension/version prefix is preserved. A real local HTTP check verifies both entrypoints and their assets below a nested prefix. This does not replace installed Extension testing.

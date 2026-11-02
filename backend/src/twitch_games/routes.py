@@ -27,6 +27,7 @@ router = APIRouter(prefix="/api/v1")
 
 def context(request):
     auth = request.app.state.auth
+    service = request.app.state.game_service
     identity = auth.identity(request)
     target = request.path_params.get("channel_id")
     if identity.source == "dashboard" and target is None:
@@ -36,15 +37,18 @@ def context(request):
             ("stream_id", "streams"),
         ):
             if key in request.path_params:
-                with auth.require_database().transaction() as c:
-                    record = one(
-                        c,
-                        f"SELECT channel_id FROM twitch_games.{table} WHERE id=:id",
-                        id=request.path_params[key],
-                    )
-                if record is None:
-                    raise GameError("not_found", "Resource not found", 404)
-                target = record["channel_id"]
+                if hasattr(service, "resolve_channel"):
+                    target = service.resolve_channel(key, request.path_params[key])
+                else:
+                    with auth.require_database().transaction() as c:
+                        record = one(
+                            c,
+                            f"SELECT channel_id FROM twitch_games.{table} WHERE id=:id",
+                            id=request.path_params[key],
+                        )
+                    if record is None:
+                        raise GameError("not_found", "Resource not found", 404)
+                    target = record["channel_id"]
                 break
     if target:
         identity = auth.workspace(identity, target)
@@ -87,6 +91,8 @@ def captions(stream_id: UUID, body: TranscriptBatch, request: Request):
 )
 def questions(stream_id: UUID, request: Request):
     service, identity = context(request)
+    if hasattr(service, "questions_http"):
+        return service.questions_http(identity, stream_id)
     with service.db().transaction() as c:
         service.resource(c, "streams", stream_id, identity, owner=True)
         return service.questions(c, stream_id)
@@ -160,6 +166,8 @@ def leaderboard(game_id: UUID, request: Request):
 @router.get("/channels/{channel_id}/moderators", tags=["dashboard"])
 def list_grants(channel_id: str, request: Request):
     service, identity = context(request)
+    if hasattr(service, "grants"):
+        return service.grants(identity, channel_id)
     identity.owner(channel_id)
     with service.db().transaction() as c:
         return [
@@ -180,6 +188,8 @@ def list_grants(channel_id: str, request: Request):
 @router.put("/channels/{channel_id}/moderators", tags=["dashboard"])
 def set_grants(channel_id: str, body: GrantUpdate, request: Request):
     service, identity = context(request)
+    if hasattr(service, "grants"):
+        return service.grants(identity, channel_id, body=body)
     identity.owner(channel_id)
     auth = request.app.state.auth
     moderator = auth.provider.user_by_login(body.login)
@@ -221,6 +231,9 @@ def revoke_grants(channel_id: str, moderator_id: str, request: Request):
     from fastapi import Response
 
     service, identity = context(request)
+    if hasattr(service, "grants"):
+        service.grants(identity, channel_id, moderator_id=moderator_id)
+        return Response(status_code=204)
     identity.owner(channel_id)
     with service.db().transaction() as c:
         service.lock_channel(c, identity)

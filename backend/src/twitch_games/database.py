@@ -11,7 +11,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from twitch_games.config import Settings
 
 SCHEMA = "twitch_games"
-SCHEMA_REVISION = "0004_dashboard_auth"
+SCHEMA_REVISION = "0005_http_rpc"
 DatabaseStatus = Literal["not_configured", "unavailable", "migration_required", "ok"]
 
 

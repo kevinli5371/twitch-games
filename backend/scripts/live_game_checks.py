@@ -109,6 +109,13 @@ def main():
             "TWITCH_EXTENSION_OWNER_ID": "90001",
             "TEST_TWITCH_BASE_URL": provider_url,
         }
+        if os.environ.get("TWITCH_GAMES_TEST_SUPABASE_HTTP_URL"):
+            values.update(
+                STORAGE_BACKEND="supabase_http",
+                SUPABASE_URL="https://fixture.supabase.co",
+                SUPABASE_SECRET_KEY="sb_secret_local_http_test_only",
+                TEST_SUPABASE_HTTP_URL=os.environ["TWITCH_GAMES_TEST_SUPABASE_HTTP_URL"],
+            )
         environment.update({"TWITCH_GAMES_" + k: v for k, v in values.items()})
 
         def start_server():
@@ -134,7 +141,7 @@ def main():
                 if process.poll() is not None:
                     raise RuntimeError("Local API process exited during startup")
                 try:
-                    response = httpx.get(base + "/health/live", timeout=1)
+                    response = httpx.get(base + "/health/ready", timeout=1)
                     if response.status_code == 200:
                         return process
                 except httpx.HTTPError:
@@ -527,7 +534,13 @@ def main():
                 process.terminate()
                 process.communicate(timeout=10)
             with database.transaction() as c:
+                run(
+                    c,
+                    "DELETE FROM twitch_games.backend_claims WHERE key LIKE :prefix",
+                    prefix=channel + "%",
+                )
                 for table in (
+                    "generation_queue",
                     "moderator_grants",
                     "state_notifications",
                     "command_receipts",
