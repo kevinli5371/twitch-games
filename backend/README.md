@@ -126,3 +126,7 @@ Use HTTPS, production mode, disabled docs, exact CORS origins, and matching regi
 Hosting/domain selection and actual desktop/iOS/Android Twitch surfaces remain external integration work. Do not claim deployment, caption-source feasibility, Twitch approval or device testing from the automated local checks.
 
 The Docker verifier now runs the API suite through both SQL and actual PostgREST HTTP storage. Its fake API-key gateway models Supabase gateway authentication only; SQL/RPC execution uses the official pinned PostgREST image. All test keys are synthetic, loopback-only and isolated from `.env`.
+
+## Chrome blocks the native Local Test viewer
+
+For the observed Local Network Access failure and the locally tested Extension-only gateway, see [public test setup](docs/extension-public-test.md). Starting the gateway does not publish it; a separate public tunnel requires owner approval.
