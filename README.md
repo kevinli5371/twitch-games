@@ -1,63 +1,52 @@
 # Twitch Games
 
-A Twitch Extension for streamer-controlled audience games. The first release includes quote completion, niche, and hive mind, with private free-text answers and interim/final leaderboards. Quote completion uses sourced broadcast quotes; historical intake and detailed scoring rules remain backend work to resolve.
+A Twitch Extension for streamer-controlled audience games, with a desktop video overlay and a mobile Extension view. The first build includes Quote Completion, Niche, and Hive Mind. Read the [product and architecture specification](docs/product-spec.md) and [backend API handoff](docs/backend-scope.md) before extending the project.
 
-## Start here
+## Viewer overlay preview and Twitch Local Test
 
-Read the [product and architecture specification](docs/product-spec.md) before implementation. It contains the complete project context, confirmed decisions, proposed architecture, platform constraints, open product questions, and acceptance criteria. No access to the original chat is required.
+Requires Node.js 20+ and OpenSSL (included with macOS). No package install is needed.
 
-Read the [backend scope and API handoff](docs/backend-scope.md) for Kevin's work packages and the contracts used by both frontend owners.
+Create and trust the local development certificate once:
 
-## Confirmed backend stack and ownership
+1. Run `npm run cert` from the project folder.
+2. In Keychain Access, import `certs/localhost-ca.pem` into the **login** keychain.
+3. Double-click **Twitch Games Local Development CA**, expand **Trust**, select **Always Trust**, close it, and approve the macOS prompt if shown. Restart the browser if it was already open.
 
-- **Python + FastAPI** for the application backend, owned by Kevin.
-- **Supabase PostgreSQL** for durable storage.
-- One teammate owns the viewer Extension; another owns the streamer dashboard and browser caption collector.
-- Backend hosting, model provider and worker/job mechanism remain unselected. Supabase Auth/Realtime/Queues are not automatically included by the database choice.
+Run the overlay server:
 
-## Current status
-
-**Local fixture dashboard and backend foundation.** The dashboard supports local question approval/rejection, creation, filtering, round-order setup, and cooldown drafts. It uses labeled sample data and browser-local storage. Live controls are disabled. The FastAPI foundation supplies contracts, fail-closed authentication/repository seams, a pure planning helper, tests, and a proposed private PostgreSQL migration. It is not a playable live backend.
-
-No deployed service, Twitch authentication, caption capture, historical intake, AI generation, scoring engine, viewer Extension, or real-device validation is implemented/verified. Backend setup and limitations are in [backend/README.md](backend/README.md).
-
-## Run the local dashboard
-
-Requires Node.js 22+; no frontend dependencies or installation are needed.
-
-```powershell
+```sh
 npm run dev
 ```
 
-Open `http://127.0.0.1:4173/`. If the port is occupied, set `$env:PORT = '4174'` before running. The server binds to loopback and serves only `apps/dashboard/`. This privileged fixture dashboard must never be packaged as viewer Extension assets.
+Open `https://localhost:4173/` for a local preview. It uses synthetic prompts and mock states; it does not connect to Twitch or evaluate real answers.
 
-```powershell
-npm test
-node --check apps/dashboard/app.js
+For Twitch Local Test, configure the Extension Developer Console with Testing Base URI `https://localhost:4173/`, Video - Fullscreen Viewer Path `viewer.html?demo=1`, and Mobile Viewer Path `mobile.html?demo=1`. Start the server and activate Local Test on your channel. The browser used for Twitch must trust the local CA. See [Twitch's Local Test guide](https://dev.twitch.tv/docs/tutorials/extension-101-tutorial-series/local-test/).
+
+The demo mode uses placeholder evaluation. Remove `demo=1` only after configuring the backend URL in `public/extension-config.js` and connecting the backend. Never put the Twitch Client Secret, Extension signing secret, or database credentials in viewer files.
+
+## Local dashboard fixture
+
+The dashboard is a separate local fixture, served from loopback and not packaged as viewer Extension assets:
+
+```sh
+npm run dev:dashboard
 ```
 
-Observed November 2, 2026: 10 Node tests pass, JavaScript syntax and `git diff --check` pass. Browser QA verified approval queue updates, creation/search of an approved niche question, exact/random setup switching, adding a round, and a 390px layout without page overflow while retaining Game status. These are local fixture checks, not Twitch/mobile-app validation. Python was not found on PATH, so Python tests/API runtime were not executed; the SQL migration was not applied.
+Open `http://127.0.0.1:4173/`. If the port is occupied, set `PORT` to another port before starting. The fixture uses sample data and browser-local storage; live controls are disabled. See [dashboard setup and limitations](apps/dashboard/README.md) and [backend setup and limitations](backend/README.md).
 
-Three fresh skeptic passes reviewed the foundation and drove fixes for hidden-answer authorization boundaries, strict eligibility inputs, dialog naming, mobile status visibility, module delivery, and malformed saved-data crashes. See [implementation review](docs/implementation-review.md). The loop is stopped for the unresolved gameplay decisions listed there.
+## Current implementation status
 
-## Agreed first release
+- The local overlay preview and Twitch viewer/mobile asset shells are implemented.
+- The Extension uses Twitch's Extension Helper identity callback, private HTTPS snapshot/submission calls, and Extension PubSub updates. A viewer can minimize the overlay for themselves; the streamer dashboard/backend handoff includes a channel-wide visibility flag.
+- The backend URL is blank, and live API calls, Twitch Local Test, and device behavior have not been verified. The local demo is not live gameplay.
+- The streamer dashboard fixture and FastAPI backend foundation are in the repository, but there is no deployed playable game service. Captions are conditional and live capture is unverified.
 
-- Native Twitch Extension over the video on desktop; mobile-enabled Extension view in Twitch's mobile app.
-- Streamer dashboard for activating and monitoring games. OBS is not required.
-- Dashboard direction includes moderator question creation/review, an approved question bank, and streamer-controlled automatic/scheduled games. Detailed workflow and automation/scheduling release placement are being scoped in section 4 of the specification.
-- Broadcast quote prompts, normally with one missing word. Previous broadcasts are permitted sources; historical intake is deferred backend work.
-- Private free-text answers through our UI, with lenient spelling/equivalence handling.
-- Interim results and leaderboard, followed by a final leaderboard.
-- Quote completion, niche, and hive mind all launch in the first release. The dashboard supports an exact round order or random rotation with no consecutive rounds of the same mode. Auto + randomized needs no manual mode selection; ad-triggered starts remain future work.
-- A game contains streamer-set rounds; each round randomly has 3–5 questions in one mode. Reserve enough approved, off-cooldown questions before starting. Used questions enter a channel-wide cooldown measured in completed games. Low-bank warnings prompt replenishment without pausing an ongoing game.
-- Questions auto-advance on streamer-configured timers; authorized operators can pause, skip, or end play. Viewers submit one final answer per question, without edits. Backend equivalent-answer handling is required.
-- Scores reset per game; show interim standings after each round and all participants in final standings (zero-score inclusion/presentation still open). Reopening/reconnecting the dashboard resumes from its saved game position; timer recovery details remain open.
-- Niche uses a valid-word list with rarity tiers calculated from submitted answers; hive mind identifies the most common submitted answer/group. Exact points and participation-versus-popularity scoring remain open. Automatic-start/scheduling details are explicitly deferred.
+## First-build gameplay decisions
 
-Twitch captions are **conditional**, not automatic transcripts for every channel. The spec explains the documented caption path, the required proof of concept, and the unresolved fallback choice.
+- All three modes are included. Per-round mode can be streamer-selected or randomized; randomized selection excludes the immediately previous mode.
+- Games default to five rounds; the separate streamer dashboard will allow changing that count.
+- Each round has a 30-second answer window. The streamer may close early and advances after results; rounds do not auto-advance.
+- One submission per viewer per round; no speed bonus. Editable submissions may be considered later.
+- Answer validity and equivalent-answer grouping are backend-owned and remain placeholders in this build. First-build scoring and tie handling are documented in [the product spec](docs/product-spec.md).
 
-## Before implementing dependent gameplay
-
-Resolve the remaining [open decisions](docs/product-spec.md#14-decisions-still-needed), especially scoring, equivalence rules, timer/recovery details, permissions, and deferred scheduling/source intake. Answer revisions are disallowed and scores reset per game. Proposed recommendations are not confirmed defaults.
-
-Use the [implementation sequence](docs/product-spec.md#16-recommended-implementation-sequence) and [acceptance criteria](docs/product-spec.md#13-first-release-acceptance-criteria) to plan work. Add reproducible setup and test instructions here as the application is implemented. Never commit credentials.
+Never commit credentials. Update the README with commands actually run, observed results, and known limitations.
