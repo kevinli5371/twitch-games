@@ -82,3 +82,25 @@ test('a late workspace response cannot replace the newly selected identity',asyn
  waiting.get('/api/v1/auth/me?channel_id=90001')(json({selected_workspace:{channel_id:'90001',permissions:['live_control']}}));await older;
  assert.equal(api.identity.selected_workspace.channel_id,'90002');assert.equal(api.allowed('live_control'),false);
 });
+
+// Twitch CDN assets live below an extension/version prefix, not at the host root.
+test('native viewer assets resolve under a hosted Extension version prefix', async () => {
+ const handler=createAppHandler(); const prefix='/extension/version/';
+ const server=createServer((req,res)=>{
+  if(!req.url.startsWith(prefix)){res.writeHead(404).end();return;}
+  req.url='/'+req.url.slice(prefix.length);return handler(req,res);
+ });
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ const base=`http://127.0.0.1:${server.address().port}${prefix}`;
+ try {
+  for(const page of ['viewer.html','mobile.html']){
+   const html=await(await fetch(base+page)).text();
+   for(const [,asset]of html.matchAll(/(?:src|href)="([^"]+)"/g)){
+    if(asset.startsWith('https://'))continue;
+    const url=new URL(asset,base+page);
+    assert.ok(url.pathname.startsWith(prefix),asset);
+    assert.equal((await fetch(url)).status,200,asset);
+   }
+  }
+ }finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
+});
