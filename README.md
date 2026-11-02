@@ -17,7 +17,28 @@ Read the [backend scope and API handoff](docs/backend-scope.md) for Kevin's work
 
 ## Current status
 
-**Documentation only.** This repository does not yet contain application code, installation/run commands, deployments, or validated live integrations. Caption capture, mobile behavior, and Extension approval have not been demonstrated by this repository.
+**Local fixture dashboard and backend foundation.** The dashboard supports local question approval/rejection, creation, filtering, round-order setup, and cooldown drafts. It uses labeled sample data and browser-local storage. Live controls are disabled. The FastAPI foundation supplies contracts, fail-closed authentication/repository seams, a pure planning helper, tests, and a proposed private PostgreSQL migration. It is not a playable live backend.
+
+No deployed service, Twitch authentication, caption capture, historical intake, AI generation, scoring engine, viewer Extension, or real-device validation is implemented/verified. Backend setup and limitations are in [backend/README.md](backend/README.md).
+
+## Run the local dashboard
+
+Requires Node.js 22+; no frontend dependencies or installation are needed.
+
+```powershell
+npm run dev
+```
+
+Open `http://127.0.0.1:4173/`. If the port is occupied, set `$env:PORT = '4174'` before running. The server binds to loopback and serves only `apps/dashboard/`. This privileged fixture dashboard must never be packaged as viewer Extension assets.
+
+```powershell
+npm test
+node --check apps/dashboard/app.js
+```
+
+Observed November 2, 2026: 10 Node tests pass, JavaScript syntax and `git diff --check` pass. Browser QA verified approval queue updates, creation/search of an approved niche question, exact/random setup switching, adding a round, and a 390px layout without page overflow while retaining Game status. These are local fixture checks, not Twitch/mobile-app validation. Python was not found on PATH, so Python tests/API runtime were not executed; the SQL migration was not applied.
+
+Three fresh skeptic passes reviewed the foundation and drove fixes for hidden-answer authorization boundaries, strict eligibility inputs, dialog naming, mobile status visibility, module delivery, and malformed saved-data crashes. See [implementation review](docs/implementation-review.md). The loop is stopped for the unresolved gameplay decisions listed there.
 
 ## Agreed first release
 
