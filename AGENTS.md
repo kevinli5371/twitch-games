@@ -15,3 +15,7 @@ Read `docs/backend-scope.md` for backend ownership, work packages and proposed A
 - Keep unrevealed answers and credentials off viewer clients. Enforce channel ownership, submission eligibility, and scoring on the backend.
 - FastAPI remains the game authority. Keep elevated Supabase/database credentials server-side and protect private tables from direct client access. Supabase Auth, Realtime and Queues are not implicitly selected.
 - Record later owner decisions in the spec and keep actual setup, progress, validation, and limitations in the README. Do not present architectural plans as completed implementation.
+
+## Current connected implementation
+
+Read `docs/fullstack-integration.md` for the current integration boundary. The dashboard defaults to a real Live game workspace; planning tabs stay labelled fixtures. `public/api-adapter.mjs` maps the implemented quote API, while `demo=1` remains in-memory preview only. `npm run dev:app` serves dashboard/API proxy on 4173; `npm run dev` serves HTTPS Local Test on 4174. Native viewer secrets stay server-side. Preserve owner-confirmed quote rules from backend/README.md while broader modes remain follow-up work; connecting the components did not authorize silently replacing those runtime policies. Browser test fixtures live under backend/scripts and never modify production authentication.

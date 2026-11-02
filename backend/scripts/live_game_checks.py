@@ -505,6 +505,18 @@ def main():
                 )
                 checked(owner, "POST", "/api/v1/auth/logout", 204)
                 checked(owner, "GET", "/api/v1/auth/me", 401)
+                node_environment = {
+                    **environment,
+                    "FULLSTACK_TEST_BASE": base,
+                    "FULLSTACK_TEST_CHANNEL": channel,
+                    "FULLSTACK_TEST_VIEWER_TOKEN": first["Authorization"][7:],
+                }
+                subprocess.run(
+                    ["node", str(ROOT / "scripts/fullstack_clients.mjs")],
+                    env=node_environment,
+                    check=True,
+                    timeout=60,
+                )
                 coverage.verify()
                 print(
                     "Verified real local HTTP/PostgreSQL; Twitch uses an HTTP fixture.",

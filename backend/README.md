@@ -13,7 +13,7 @@ FastAPI + Supabase PostgreSQL backend for the native Twitch quote-completion Ext
 - Persistent deadlines and state versions; restart recovery; durable/coalesced Twitch PubSub notifications containing only channel/version information.
 - Runtime OpenAPI, frontend handoff, Docker packaging and repeatable real-server/database verification.
 
-This implements the backend for quote mode. Viewer and dashboard UI belong to the other teammates. Niche, hive mind, ad triggers, VOD import, bank scheduling and audio transcription are not implemented. PR #1's dashboard is a fixture preview, not proof of connected frontend functionality.
+This implements the backend for quote mode. The viewer and dashboard Live game workspace now call this API; see root docs/fullstack-integration.md. The original planning UI remains a fixture. Niche, hive mind, ad triggers, VOD import, bank scheduling and audio transcription are not implemented. The broader PR #1 planning tabs remain fixture previews.
 
 Read [frontend handoff](docs/frontend-handoff.md), [current API](docs/openapi.json), [implementation plan](docs/implementation-plan.md), [verification](docs/backend-verification.md), and [PR #1 reconciliation](docs/pr-1-reconciliation.md).
 
@@ -100,7 +100,7 @@ The canonical schema is `twitch_games`. Do not apply PR #1's independent `game_p
 .venv/bin/python scripts/check_supabase.py
 ```
 
-`postgres_checks.py` provisions disposable loopback PostgreSQL, tests migration upgrades/downgrades and legacy session preservation, runs all tests, then starts a real Uvicorn server for a full game. It verifies real HTTP OAuth, moderator grants, refresh/revocation, a true 30-second timer, a process restart, scoring and final standings. Twitch in that script is an explicitly identified HTTP fixture. Containers and test records are cleaned up.
+`postgres_checks.py` requires Docker and Node 22+ for actual JavaScript client checks. It provisions disposable loopback PostgreSQL, tests migration upgrades/downgrades and legacy session preservation, runs all tests, then starts a real Uvicorn server for a full game. It verifies real HTTP OAuth, moderator grants, refresh/revocation, a true 30-second timer, a process restart, scoring and final standings. Twitch in that script is an explicitly identified HTTP fixture. Containers and test records are cleaned up.
 
 After Docker verification, the hosted additive migration and a temporary rolled-back write can be checked with:
 

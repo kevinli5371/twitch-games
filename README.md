@@ -1,53 +1,28 @@
 # Twitch Games
 
-A Twitch Extension for streamer-controlled audience games, with a desktop video overlay and a mobile Extension view. The first build includes Quote Completion, Niche, and Hive Mind. Read the [product and architecture specification](docs/product-spec.md) and [backend API handoff](docs/backend-scope.md) before extending the project.
+A native Twitch Extension, streamer dashboard and FastAPI/PostgreSQL backend. **Quote mode is connected across all three components.** The broader product plan includes Niche and Hive Mind; their workflow/visual previews remain separate from the working quote runtime.
 
-## Implemented backend and integration status
+## Run the connected app
 
-The FastAPI quote-game backend now implements Twitch dashboard OAuth, owner-controlled moderator grants, private Supabase persistence, caption intake, algorithmic quote selection/matching, 30-second rounds, editable answers, scoring, leaderboards and restart recovery. See [backend setup](backend/README.md), [frontend contract](backend/docs/frontend-handoff.md) and [verification evidence](backend/docs/backend-verification.md).
-
-All 24 documented backend API operations passed real local HTTP checks. Real Supabase migrations and Twitch browser OAuth/refresh checks also passed. On November 2, the owner approved backend merge with full Twitch/frontend E2E deferred until the test stream is ready. Installed Extension JWTs/PubSub, actual caption capture, frontend contract wiring, mobile/device checks and production deployment remain pending.
-
-The broader three-mode product plan and UI fixtures below are separate from the implemented quote runtime. Quote mode currently uses manual advancement, no early close, editable answers and 1/0 scoring. [Reconciliation notes](backend/docs/pr-1-reconciliation.md) record these differences; merging the backend does not claim the entire broader plan is implemented.
-
-## Viewer overlay preview and Twitch Local Test
-
-Requires Node.js 20+ and OpenSSL (included with macOS). No package install is needed.
-
-Create and trust the local development certificate once:
-
-1. Run `npm run cert` from the project folder.
-2. In Keychain Access, import `certs/localhost-ca.pem` into the **login** keychain.
-3. Double-click **Twitch Games Local Development CA**, expand **Trust**, select **Always Trust**, close it, and approve the macOS prompt if shown. Restart the browser if it was already open.
-
-Run the overlay server:
+Start FastAPI from `backend/` using its [setup guide](backend/README.md), then run from the repository root:
 
 ```sh
-npm run dev
+npm run dev:app
 ```
 
-Open `https://localhost:4173/` for a local preview. It uses synthetic prompts and mock states; it does not connect to Twitch or evaluate real answers.
+Open `http://localhost:4173/`. **Live game** uses actual Twitch OAuth sessions, verified workspaces, backend controls, caption intake, quote generation, private viewer answers, scoring and leaderboards. Planning tabs remain labelled fixture previews. Full contracts, Local Test setup and verified limits are in [full-stack integration](docs/fullstack-integration.md).
 
-For Twitch Local Test, configure the Extension Developer Console with Testing Base URI `https://localhost:4173/`, Video - Fullscreen Viewer Path `viewer.html?demo=1`, and Mobile Viewer Path `mobile.html?demo=1`. Start the server and activate Local Test on your channel. The browser used for Twitch must trust the local CA. See [Twitch's Local Test guide](https://dev.twitch.tv/docs/tutorials/extension-101-tutorial-series/local-test/).
+For the native Extension's HTTPS Local Test assets, run `npm run cert`, trust the local CA, and run `npm run dev` (port 4174 by default). Configure Testing Base URI `https://localhost:4174/`, Viewer Path `viewer.html`, Mobile Path `mobile.html`, without `demo=1`. The server proxies API calls to FastAPI. Uploaded viewer assets need their public HTTPS backend URL and allowed domains configured. Never include secrets in viewer files.
 
-The demo mode uses placeholder evaluation. Remove `demo=1` only after configuring the backend URL in `public/extension-config.js` and connecting the backend. Never put the Twitch Client Secret, Extension signing secret, or database credentials in viewer files.
+The original in-memory visual simulator remains at `/preview.html`; `viewer.html?demo=1` and `mobile.html?demo=1` also use sample state only. These are distinct from connected play.
 
-## Local dashboard fixture
+## Observed verification and limits
 
-The dashboard is a separate local fixture, served from loopback and not packaged as viewer Extension assets:
+144 Python tests plus 10 subtests and 16 Node tests pass. All 24 backend operations have successful real HTTP cases. The actual JavaScript clients also complete a real API/database round, and browser testing verified two viewers, private answers/edits, the 30-second close, backend scores, final standings and reconnect. Twitch/caption inputs in that repeatable flow are explicitly synthetic. See [evidence and setup](docs/fullstack-integration.md).
 
-```sh
-npm run dev:dashboard
-```
+Current hosted blocker: the configured Supabase direct endpoint is IPv6-only and this machine currently has no route to it. Use the exact **Session pooler** URI from Supabase Connect for IPv4; keys do not need rotating. Real caption-enabled broadcast, installed Extension/PubSub, physical devices and public deployment remain unverified.
 
-Open `http://127.0.0.1:4173/`. If the port is occupied, set `PORT` to another port before starting. The fixture uses sample data and browser-local storage; live controls are disabled. See [dashboard setup and limitations](apps/dashboard/README.md) and [backend setup and limitations](backend/README.md).
-
-## Current implementation status
-
-- The local overlay preview and Twitch viewer/mobile asset shells are implemented.
-- The Extension uses Twitch's Extension Helper identity callback, private HTTPS snapshot/submission calls, and Extension PubSub updates. A viewer can minimize the overlay for themselves; the streamer dashboard/backend handoff includes a channel-wide visibility flag.
-- The backend URL is blank, and live API calls, Twitch Local Test, and device behavior have not been verified. The local demo is not live gameplay.
-- The streamer dashboard remains a fixture. The implemented quote backend runs locally; the viewer’s proposed auth, payload and PubSub contract still needs wiring to the actual API. No public deployment or real caption capture is verified.
+The quote backend keeps its confirmed manual advancement, 30-second deadline, editable-answer and 1/0-scoring rules. The following broader UI plan is not a claim that all three runtime modes are implemented.
 
 ## First-build gameplay decisions
 

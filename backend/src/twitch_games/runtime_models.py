@@ -66,6 +66,7 @@ class WorkspaceAccess(Contract):
 
 
 class WorkspaceInfo(WorkspaceAccess):
+    login: str | None = None
     display_name: str | None
 
 

@@ -19,7 +19,7 @@ Artificial owner response:
 {
   "user": {"user_id":"90001","login":"example_owner","display_name":"Example Owner","avatar_url":"https://example.test/avatar.png"},
   "owned_channel":{"channel_id":"90001","display_name":"Example Owner"},
-  "workspaces":[{"channel_id":"90001","display_name":"Example Owner","role":"owner","permissions":["live_control","question_review","settings"]}],
+  "workspaces":[{"channel_id":"90001","login":"example_owner","display_name":"Example Owner","role":"owner","permissions":["live_control","question_review","settings"]}],
   "selected_workspace":{"channel_id":"90001","role":"owner","permissions":["live_control","question_review","settings"]},
   "csrf_token":"opaque-csrf-value"
 }
@@ -94,3 +94,7 @@ Errors use `{ "error": {"code":"...","message":"..."} }` without secret/token/SQ
 - 503: configuration, database, or Twitch dependency unavailable. Do not turn this into a successful fake login.
 
 The complete backend environment-variable list and sources are in [README](../README.md) and `.env.example`. Application and Extension ownership can differ. Frontends need only API base, their own allowed origin, and the Extension Client ID/helper configuration; all client secrets, signing keys, database credentials and encryption keys stay server-side.
+
+## Connected clients
+
+The dashboard Live game workspace and native viewer now use this implemented contract; see root `docs/fullstack-integration.md`. `/auth/me` workspaces include a verified `login` for the visible Twitch player (nullable for legacy records). The local same-origin proxy preserves cookies/CSRF and serves the actual API client; no new production auth path or schema migration was added. Planning tabs remain explicitly labelled fixtures.
