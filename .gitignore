@@ -8,3 +8,5 @@ __pycache__/
 !.env.example
 coverage/
 artifacts/
+public/extension-config.local.js
+certs/

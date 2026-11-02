@@ -42,3 +42,7 @@ Production hosting/domain, callback/CORS values and real HTTPS cookie behavior r
 ## Main-branch reconciliation
 
 Merged main at `9b16fec` (PR #1), preserved its dashboard and pure planning utilities, and replaced the duplicate API entry point with a compatibility alias to the implemented factory. The proposed legacy SQL is retained as documentation. After reconciliation, 144 Python tests plus 10 subtests and all 10 Node dashboard/preview tests passed; real HTTP auth/gameplay and migration checks passed again. The preview now rejects encoded backslash paths consistently on macOS and Windows-style paths. Product-policy differences with the newer main specification are flagged for review in pr-1-reconciliation.md.
+
+## Deferred live E2E boundary
+
+The owner approved backend merge on November 2 with full Twitch/frontend E2E deferred until the caption-enabled test stream is ready. Main’s dashboard and viewer assets are preserved. Their presence does not verify caption collection or API compatibility; the viewer still uses a proposed contract that differs from the implemented handoff. These checks remain pending after merge.

@@ -1,6 +1,6 @@
 # Stream Quote Game — product and architecture specification
 
-Version: 0.5 · November 1, 2026
+Version: 0.6 · November 2, 2026
 
 This specification captures the agreed product and proposes an architecture for delivering it. It is a product specification, not an implementation or a claim that Twitch captions have been tested successfully. Items marked **Proposed** are recommendations for review. Items marked **Open** have not been decided and must not silently become implementation defaults.
 
@@ -8,7 +8,7 @@ This specification captures the agreed product and proposes an architecture for 
 
 The repository is `kevinli5371/twitch-games`. The owner is building a project for the **Codex x TwitchCon Hackathon**. Its product is live, stream-specific audience games controlled by the streamer. The name “Stream Quote Game” in this document describes the initial mode; a final product/brand name has not been selected.
 
-**Repository baseline:** the remote repository was empty when this specification was added. This commit provides documentation only. There is no application, dependency setup, database, deployed backend, registered Extension, configured OAuth integration, verified caption feed, or completed test run supplied by this repository. Do not interpret architectural diagrams or acceptance criteria as implemented features. External account setup has not been inspected and must not be presumed absent or complete.
+**Repository baseline:** the remote repository was empty when this specification was first added. The repo now has a local overlay preview and Twitch viewer/mobile HTML shells, plus a fixture dashboard and backend foundation. The backend URL is unconfigured; live API calls and Twitch Local Test have not been validated. No deployed playable game service or verified caption feed is supplied. Do not interpret plans as implemented features. External account setup should not be presumed absent or complete.
 
 Read this document without requiring the originating chat. The decision labels mean:
 
@@ -35,6 +35,17 @@ The owner explicitly asked that unspecified product behavior **not be assumed**.
 | Captions | A documented caption event was researched, but real stream capture has **not** been proven. Automatic transcripts for arbitrary channels are not an available assumption. |
 | Backend ownership and stack | Kevin owns the backend, transcript processing and generation. Python + FastAPI and Supabase PostgreSQL are selected; the backend work scope is approved. |
 
+### Latest owner decisions — viewer overlay first build (November 2, 2026)
+
+- Include Quote Completion, Niche, and Hive Mind in the first build.
+- For each round, the streamer chooses a mode or selects random. Random selection excludes the immediately previous mode; the streamer dashboard controls are a separate workstream.
+- Default each game to five rounds. The dashboard may set another count; freeze the selected count when a game starts.
+- Use a 30-second answer window. The streamer may close early and advance after results; rounds do not auto-advance.
+- Allow one submission per viewer per round, without speed bonus. Editable submissions may be considered later.
+- Keep answer validity and equivalent-answer handling as placeholders until the separate backend is connected.
+- Decisions made for the first-build scoring and ties are specified in section 8; these are product defaults for this build.
+- The streamer controls channel-wide game overlay visibility. Viewers can hide/show the extension for themselves only. A viewer cannot activate the extension on a channel where the streamer has not enabled it.
+
 ### Product example, not a scoring decision
 
 A captioned passage contains “I cannot believe we won with a spoon.” The game can present “I cannot believe we won with a ____.” Viewers privately type an answer in the Extension. At the agreed round boundary, the backend evaluates answers and publishes results and updated standings. “spoon” is canonical; whether another word or typo is accepted follows the answer policy that still needs to be finalized. No example here establishes a point value, timer length, or answer-editing policy.
@@ -43,24 +54,26 @@ A captioned passage contains “I cannot believe we won with a spoon.” The gam
 
 Build a Twitch Extension that lets a streamer run games based on what has been said during their live broadcast. Viewers participate through the Extension's own interface. The streamer monitors and controls play from a dashboard.
 
-The first release contains **quote completion, niche, and hive mind**, with a dashboard designed for all three. The following quote-completion requirements remain confirmed; mode-specific rules for niche and hive mind still need refinement:
+The first build contains **Quote Completion, Niche, and Hive Mind**. Per-round mode selection, the five-round default, timer, submission, and overlay visibility decisions are listed in section 0. Answer validity and equivalent-answer grouping are backend-owned and remain integration placeholders in the overlay.
 
 - Use sourced broadcast quotes to generate fill-in-the-blank prompts. Previous broadcasts are allowed as product direction; historical intake is deferred backend work, not an implemented fallback.
 - Each prompt normally removes one word.
 - Viewers type their answers into our UI, rather than public Twitch chat.
 - Accept spelling mistakes and reasonable equivalent wording. The exact boundary for semantic equivalents remains open.
 - Award points and show interim results, an interim leaderboard, and a final leaderboard.
-- The streamer chooses when to activate the game.
+- The streamer chooses when to activate the game and may close rounds early, then advances after results.
 - Support desktop and mobile viewers.
 - Desktop uses a native Twitch Extension over the video. OBS is not required.
-- Ad-triggered starts remain future work. Streamer-controlled automatic starts and dashboard scheduling are now confirmed product direction; detailed rules and release placement remain open (section 4).
+- Each game defaults to five rounds; mode choice is per round, and random choice never repeats the previous mode consecutively.
+- Each round allows 30 seconds for answers, has one submission per viewer, and awards no speed bonus. Rounds do not auto-advance.
+- Ad-triggered starts remain future work. Streamer-controlled automatic starts and dashboard scheduling are a separate dashboard workstream; see section 4.
 
 Additional first-release game modes:
 
 | Mode | Agreed direction | Still unspecified |
 | --- | --- | --- |
-| Niche | Each question has a set of valid words. Rank submitted valid answers into tiers dynamically by frequency during that question; the least-used valid words occupy the highest tier. No pre-sorted rarity tiers. | Tier boundaries, tied frequencies, point mapping, and how the owner's participation-based scoring direction relates to rarity tiers. |
-| Hive mind | Submitted-answer frequency determines which word/group is most common dynamically. | Whether a valid-word list is required, tied frequencies, point mapping, and participation-based scoring details. |
+| Niche | Valid answers are ranked dynamically by popularity; less-common valid answers score more. | Backend supplies answer validity and equivalent-answer grouping; see first-build scoring in section 8. |
+| Hive mind | Valid answers are grouped and the most common group scores. | Backend supplies answer validity and equivalent-answer grouping; see first-build scoring in section 8. |
 
 All three modes require playable viewer flows, dashboard support, and agreed scoring in the first release. Chat-command answer participation, monetization, and cross-stream competitions remain outside the agreed first-release scope unless added explicitly. Previous-broadcast quote sourcing is permitted but its backend ingestion is deferred from the current dashboard work; no VOD import is implemented or selected. Audience question suggestions use an Extension form and require approval into the bank.
 
@@ -122,15 +135,22 @@ The dashboard teammate implements browser collection against Kevin's authenticat
 
 **Confirmed:** native Extension displayed over the video, with free-text answer entry. Viewers do not install a browser extension.
 
-**Proposed interface:** a compact quote card containing the incomplete quote, one answer field, a submit button, round status, and the viewer's score. Results and leaderboards occupy the same interface after a round rather than opening another page.
+**Proposed interface:** a compact mode card containing the mode-specific prompt, one answer field, a submit button, round status, and the viewer's score. Quote Completion shows the incomplete quote; Niche and Hive Mind show their prompt. Until backend validation is connected, show a clearly labeled placeholder evaluation state. Results and leaderboards occupy the same interface after a round rather than opening another page.
 
-The overlay should avoid unnecessary coverage of the broadcast. Position, dimensions, idle appearance, and how it opens are design decisions still to make. The target is a video-overlay Extension. If a Component Extension is proposed as an alternative, explain its framing/placement differences; do not silently substitute a below-video panel or OBS graphic for the chosen desktop experience.
+The overlay should avoid unnecessary coverage of the broadcast. Use Twitch's Extension Helper and local Extension asset paths. The local demo remains available for iteration. Never put Twitch signing secrets or database credentials in viewer assets.
+
+### Overlay visibility controls
+
+- The streamer dashboard controls a channel-wide visibility flag. Turning it off hides game content for viewers without ending play, closing submissions, resetting scores, or changing progress. Turning it on restores the current game state.
+- A viewer may minimize/hide the overlay for themselves using Twitch's Extension controls; restoring it shows the latest state. This does not change other viewers' visibility or game progress.
+- The broadcaster must activate the Extension on their channel. A viewer cannot enable it on an arbitrary channel. Twitch controls the availability of video overlays when the channel is offline.
+- The mobile view remains a separate Extension surface, not an on-video replica.
 
 ### Mobile surface
 
 **Confirmed:** a mobile-enabled Extension view, adapted to Twitch's mobile presentation. It is not an on-video replica of the desktop overlay. Mobile viewers open the Extension in the app's chat-region surface.
 
-**Proposed interface:** the same quote and answer field in a vertical layout, with the input kept usable when the keyboard opens. Essential controls must remain reachable in portrait and landscape. Test inside both the iOS and Android Twitch apps.
+**Proposed interface:** the same mode-specific prompt and answer field in a vertical layout, with the input kept usable when the keyboard opens. Essential controls must remain reachable in portrait and landscape. Test inside both the iOS and Android Twitch apps.
 
 Twitch supports shared responsive or separate mobile and web front ends. Its mobile policy requires the interface to fit within the stream chat viewport. [Building Extensions](https://dev.twitch.tv/docs/extensions/building/#mobile-support), [mobile requirements](https://dev.twitch.tv/docs/extensions/guidelines-and-policies/#3-mobile).
 
@@ -140,8 +160,8 @@ Twitch supports shared responsive or separate mobile and web front ends. Its mob
 | --- | --- | --- |
 | Idle | No active game / streamer has not started. | Open the Extension and view participation information. |
 | Context unavailable | The game is waiting for sufficient usable stream context. | Wait; no invented live question is substituted. |
-| Answering | Quote with a blank and the round's status/deadline. | Type and submit an answer. |
-| Submitted | Server-confirmed submission receipt. | Continue watching; one final answer per question, with no revisions. |
+| Answering | Mode-specific prompt and the 30-second round status/deadline. | Type and submit one answer. |
+| Submitted | Server-confirmed submission receipt. | Continue watching; editing is deferred as a possible change. |
 | Closed / scoring | Submissions are closed; results are being finalized. | Wait for results. |
 | Round results | Full quote, own outcome, awarded points, interim leaderboard. | View results and wait for the next round. |
 | Game ended | Final leaderboard for the completed game. | View final standing. |
@@ -283,7 +303,7 @@ The hierarchy and final leaderboard at game end are confirmed. Each round random
 Inactive -> Active -> Ended
 ```
 
-**Proposed question lifecycle:**
+**First-build round lifecycle:**
 
 ```text
 Prepared -> Answering -> Closed -> Scored -> Results
@@ -291,9 +311,9 @@ Prepared -> Answering -> Closed -> Scored -> Results
                 +----------+-> Cancelled
 ```
 
-The backend owns transitions, deadlines, question selection, submission eligibility, and score updates. A viewer's clock or UI cannot reopen a closed question.
+The backend owns transitions, deadlines, question selection, submission eligibility, and score updates. A viewer's clock or UI cannot reopen a closed round.
 
-**Proposed operational rules:** one active question per channel; do not open a question without a valid prepared prompt; preserve completed results; cancelled questions do not award points. Timed closing and automatic advancement with operator pause/skip/end controls are confirmed. Timer defaults, cancellation behavior, detailed round lifecycle, and pause/resume mechanics require confirmation.
+Use one active round per channel and do not open a round without a prepared prompt. Default a game to five rounds, with a dashboard-supplied configured count frozen at game start. Each round has a 30-second window; close submissions at expiry, while the streamer may close early and advances after results. Do not auto-advance. A canceled round awards no points and does not consume a round from the configured count. Preserve completed results. Select each round's mode from the streamer's selection or randomly from the three modes; random selection excludes the immediately previous mode.
 
 ### Future triggers
 
@@ -303,7 +323,7 @@ Do not implement ad-event subscriptions or ad-related permissions in this releas
 
 ## 8. Answer evaluation and scoring
 
-**Confirmed:** free-text answers; normally a one-word blank; leniency for spelling and reasonable equivalents.
+**Confirmed:** free-text answers; normally a one-word blank for Quote Completion. Backend validity and equivalent-answer handling remain outside the overlay and will be connected later.
 
 **Proposed evaluation sequence:**
 
@@ -319,9 +339,16 @@ Do not accept every near-spelling automatically: short words such as “cat” a
 
 **Proposed implementation approach:** establish the accepted-answer policy before opening the round, evaluate repeated normalized answers consistently, and avoid an unrestricted model call for every keystroke or submission.
 
-**Confirmed:** one final submission per question, no answer revisions; backend equivalence handling is required. Niche tiers and hive mind popularity are determined dynamically from submitted answers, with no speed weighting for those modes. See section 4 for the owner's participation-based scoring clarification and unresolved point mapping. **Open:** quote-completion points/speed policy, mode-specific point formulas, incorrect/invalid-answer treatment, exact equivalence rules, tie placement, adjudication overrides, and timer defaults.
+**First-build scoring rules:**
 
-No score formula or numeric default is assumed in this document. Scores must be applied exactly once per accepted result, even when requests or events are retried. Never deliver unrevealed answers or private scoring keys to viewer clients.
+- Quote Completion: 1 point for a backend-accepted answer and 0 otherwise.
+- Niche: 3 points for a unique valid answer, 2 when two players submit an equivalent answer, 1 when three or more submit an equivalent answer; invalid answers score 0.
+- Hive Mind: 1 point to each player in a most-common valid answer group. If groups tie for most common, all tied groups score; if there are no valid answers, no points are awarded.
+- No mode awards speed bonuses. Invalid or placeholder evaluation in the local overlay is not authoritative; the backend will provide accepted-answer validity and equivalence groups.
+
+Scores are applied exactly once per finalized result, even on retries. Never deliver unrevealed answers or private scoring keys to viewer clients. Ties in cumulative leaderboard standings share the same rank; sort tied players by display name for stable presentation. The last tie rule is an implementation choice for this first build.
+
+The viewer UI may use placeholder evaluation until the separately developed backend supplies answer validity and equivalent-answer grouping. Do not represent placeholder evaluation as authoritative. Scores must be applied exactly once per finalized result, even when requests or events are retried. Never deliver unrevealed answers or private scoring keys to viewer clients.
 
 ## 9. Results and leaderboards
 
