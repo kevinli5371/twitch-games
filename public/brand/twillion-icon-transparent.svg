@@ -5,7 +5,7 @@
     <path fill="#7042CB" d="M5 2h6v1h1v1h1v1h1v6h-1v2h-2v1H5v1H3v-2H2v-2H1V6h1V4h2V3h1Z"/>
     <rect fill="#2DD4A8" x="13" y="0" width="2" height="2"/>
     <path fill="#242131" d="M3 7h3v1H3zM10 5h2v1h-2z"/>
-    <path fill="#FAF9F6" d="M3 8h4v4H3zM10 7h3v2h-3z"/>
-    <path fill="#242131" d="M5 8h2v4H5v-1H4V9h1zM11 7h2v2h-1V8h-1zM6 13h3v-1h1v-1H9v1H6z"/>
+    <path fill="#FAF9F6" d="M3 8h4v3H3zM10 7h3v2h-3z"/>
+    <path fill="#242131" d="M5 8h2v3H5v-1H4V9h1zM11 7h2v2h-1V8h-1zM6 13h3v-1h1v-1H9v1H6z"/>
   </g>
 </svg>
