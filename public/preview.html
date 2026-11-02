@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <title>Stream Game — Overlay Preview</title>
+    <link rel="stylesheet" href="/styles.css">
+    <script src="/preview.js" defer></script>
+    <script src="/overlay.js" defer></script>
+  </head>
+  <body class="preview-page">
+    <main class="preview-layout">
+      <header class="preview-header">
+        <div>
+          <p class="preview-eyebrow">LOCAL EXTENSION PREVIEW</p>
+          <h1>Viewer overlay</h1>
+        </div>
+        <span class="fixture-chip"><span aria-hidden="true"></span> Sample data only</span>
+      </header>
+
+      <section class="stream-stage" aria-label="Simulated stream video">
+        <div class="stage-art" aria-hidden="true">
+          <div class="stage-glow stage-glow-one"></div>
+          <div class="stage-glow stage-glow-two"></div>
+          <div class="stage-grid"></div>
+          <div class="stage-scene">
+            <div class="scene-orbit orbit-one"></div>
+            <div class="scene-orbit orbit-two"></div>
+            <div class="scene-sun"></div>
+            <div class="scene-horizon"></div>
+            <div class="scene-mountain mountain-back"></div>
+            <div class="scene-mountain mountain-front"></div>
+            <div class="scene-ground"></div>
+            <div class="scene-player"></div>
+          </div>
+        </div>
+        <div class="stage-topline">
+          <span class="stream-live"><span></span> LIVE</span>
+          <span class="stage-label">SIMULATED STREAM</span>
+        </div>
+        <div class="stage-caption">
+          <span class="caption-kicker">LOCAL PREVIEW · NO LIVE VIDEO</span>
+          <strong>Sample stream scene</strong>
+        </div>
+        <div id="overlay-root" class="preview-overlay" aria-live="polite" aria-atomic="true"></div>
+      </section>
+
+      <section class="preview-controls" aria-label="Preview controls">
+        <div class="controls-heading">
+          <div>
+            <p class="preview-eyebrow">LOCAL DEMO CONTROLS</p>
+            <h2>Explore the overlay</h2>
+          </div>
+          <span id="preview-mode-label" class="controls-note">Quote Completion</span>
+        </div>
+        <div class="control-row" role="group" aria-label="Game mode">
+          <button class="choice-button is-selected" data-mode="quote" type="button">Quote Completion</button>
+          <button class="choice-button" data-mode="niche" type="button">Niche</button>
+          <button class="choice-button" data-mode="hive" type="button">Hive Mind</button>
+        </div>
+        <div class="control-row state-controls" role="group" aria-label="Overlay state">
+          <button class="state-button is-selected" data-phase="answering" type="button">Answering</button>
+          <button class="state-button" data-phase="submitted" type="button">Submitted</button>
+          <button class="state-button" data-phase="results" type="button">Round results</button>
+          <button class="state-button" data-phase="ended" type="button">Final board</button>
+          <button class="state-button" data-phase="idle" type="button">Idle</button>
+        </div>
+        <p class="preview-disclaimer">These controls simulate streamer choices. Changing the round count starts a new sample game. Names, prompts, scores, and answers are synthetic; nothing is sent to Twitch or a backend.</p>
+      </section>
+    </main>
+  </body>
+</html>

@@ -1,8 +1,8 @@
-# Backend scope — quote-game MVP
+# Backend scope — game modes MVP handoff
 
-November 1, 2026 · Planning document, not implemented code
+Updated November 2, 2026 · Planning document; backend code remains separate
 
-This document scopes the backend owned by Kevin. Read it alongside the [product specification](product-spec.md). **Confirmed: Python + FastAPI, Supabase for the managed PostgreSQL database, and approval of this backend work scope.** Backend hosting, model provider, and the gameplay policies listed below remain unselected. Endpoint names are proposed interface details; scope approval does not choose the explicitly unanswered product rules.
+This document scopes the backend owned by Kevin. Read it alongside the [product specification](product-spec.md), whose November 2, 2026 owner decisions supersede older quote-only and unresolved-gameplay statements below. **Confirmed: Python + FastAPI, Supabase for the managed PostgreSQL database, and approval of this backend work scope.** Backend hosting and model provider remain unselected. Endpoint names are proposed interface details; the first-build scoring, timer, submission, mode-selection and round-count rules are recorded in the product specification.
 
 ## 1. Ownership boundary
 
@@ -91,10 +91,16 @@ Done when a real captioned-stream batch reaches storage and a reconnect/retry do
 
 Done when a candidate is traceable to actual stream text and cannot enter a round if its quote/blank is invalid. Generate candidates once for a channel rather than separately for each viewer.
 
+The viewer also accepts mode-specific Niche and Hive Mind prompt text from the game service. Prompt generation/selection for those modes belongs to the backend/dashboard workstream and must be specified there; the viewer does not invent those prompts.
+
 ### BE-05 — Game lifecycle
 
 - Create a game, open a round with a prepared question, close the round and end the game.
-- Implement agreed advancement, timer and cancellation rules.
+- Support Quote Completion, Niche, and Hive Mind rounds.
+- Default a game to 5 rounds; record the dashboard-supplied count when the game starts and freeze it for that game.
+- For each round, use the streamer-selected mode or choose randomly while excluding the previous mode. The first randomized round may use any mode.
+- Use the 30-second answer window, early streamer close, manual advance, and no automatic advancement.
+- Canceled rounds do not score or count toward the configured total; a replacement round is opened.
 - Snapshot the chosen prompt and answer policy into the round so subsequent candidate edits cannot change an active game.
 - Serialize competing transitions with a stored state version/transaction boundary.
 - Persist state and any deadlines; recover correctly after a restart.
@@ -105,18 +111,20 @@ Done when repeated commands cannot open competing rounds or accidentally reopen 
 
 - Validate participation, answer size, active round and receipt eligibility.
 - Acknowledge only server-confirmed receipt.
-- Apply the selected one-answer/editable-answer policy.
-- Normalize text and apply the agreed typo/equivalence policy consistently.
+- Enforce one submission per viewer per round; editing is deferred.
+- Supply answer validity and equivalent-answer grouping to all three mode evaluations.
+- Apply the typo/equivalence policy consistently once the backend owner defines its concrete acceptance implementation.
 - Keep evaluation private until the round's reveal.
 
-Done when accepted/rejected spelling examples behave consistently, late answers follow the agreed boundary, and retries do not create unintended duplicate entries. Point values and semantic-equivalence thresholds are not yet defaults.
+Done when backend validity and equivalent-answer decisions are consistent across retries, late answers follow the server deadline, and duplicate submissions do not create unintended entries. Product scoring is specified in the product spec; the concrete answer-equivalence algorithm remains a backend integration detail.
 
 ### BE-07 — Scores, interim results and final leaderboard
 
-- Finalize each submission's outcome and apply the agreed point policy.
+- Apply the first-build Quote Completion, Niche and Hive Mind scores recorded in the product spec.
 - Make score application idempotent and transactional.
 - Derive rankings and individual standing from finalized scores.
-- Publish interim results and a final leaderboard at the agreed game boundary.
+- Publish interim results and a final leaderboard at game-session end; reset standings for the next session.
+- Use shared competition ranks for equal scores; do not award speed bonuses.
 - Preserve evidence/policy versions for investigating an incorrect result.
 
 Done when scoring a round twice produces the same totals and ranking, with the agreed tie and reset rules.
@@ -139,10 +147,11 @@ Route names below are suggestions; agree the exact contract before implementatio
 | Operation | Proposed endpoint | Access / response boundary |
 | --- | --- | --- |
 | Begin streamer login / callback | `GET /auth/twitch`, `GET /auth/twitch/callback` | Twitch OAuth; authenticated dashboard session. |
-| Read game state | `GET /channels/{channel_id}/game-state` | Viewer-authorized public state; no hidden answer fields. |
+| Read game state | `GET /channels/{channel_id}/game-state` | Viewer-authorized public state, including channel-wide `overlayEnabled`; no hidden answer fields. |
 | Submit an answer | `POST /rounds/{round_id}/answers` | Verified participating viewer; private receipt. |
 | Restore own answer state | `GET /rounds/{round_id}/me` | Only that viewer's receipt and permitted revealed result. |
-| Read standings | `GET /games/{game_id}/leaderboard` | Published standings only; reset/tie policy still open. |
+| Read standings | `GET /games/{game_id}/leaderboard` | Published standings only; per-game reset and shared tie ranks. |
+| Read own game result | `GET /games/{game_id}/me` | Only the linked viewer's result and standing, including final position. |
 | Dashboard snapshot | `GET /dashboard/channels/{channel_id}` | Owner-only context, candidates, current game and metrics. |
 | Caption batch intake | `POST /streams/{stream_id}/transcript-batches` | Authorized collector; idempotent batch receipt. |
 | Inspect candidates | `GET /streams/{stream_id}/questions` | Owner-only; canonical answers and source evidence. |
@@ -150,14 +159,15 @@ Route names below are suggestions; agree the exact contract before implementatio
 | Open round | `POST /games/{game_id}/rounds` | Authorized control path; manual/automatic caller depends on selected progression. |
 | Close round | `POST /rounds/{round_id}/close` | Authorized control path; server-enforced closure. |
 | End game | `POST /games/{game_id}/end` | Authorized owner; finalization behavior to be agreed. |
+| Set channel overlay visibility | `PUT /dashboard/channels/{channel_id}/overlay-visibility` | Authenticated channel owner; updates public `overlayEnabled` and broadcasts it without changing game state. |
 
 Candidate approval/editing, cancellation and manual override endpoints depend on the associated product decisions. Do not expose unfinished operations as working controls.
 
-Public state contains the blanked quote, phase, applicable timing, state version and published results. Private receipts contain submission identity/status. Privileged candidates contain the full quote, canonical answer, alternatives and evidence. Use separate schemas rather than serializing the database record directly to every caller.
+Public state contains channel-wide `overlayEnabled`, the mode, mode-specific prompt, phase, server deadline, round number/count, state version and published standings/results. The dashboard owner controls `overlayEnabled`; changing it only hides/shows the card for all viewers and must not alter the game, round, submissions or scores. Publish the change to connected viewers. Each viewer's local minimize state is separate and never changes the channel flag. It must not contain unrevealed answers or the canonical answer before reveal. Private receipts contain only the linked viewer's submission and result. Privileged quote candidates contain the full quote, canonical answer, alternatives and evidence. Use separate schemas rather than serializing the database record directly to every caller.
 
 ## 5. Data and jobs
 
-Logical records: channels/authorizations, streams, transcript segments/batches, question candidates, games, rounds, participants, submissions, score entries and generation jobs. Define migrations and uniqueness/idempotency boundaries for transcript batches, command retries and score entries. Whether answer revisions produce versions or update a single submission depends on the still-open revision rule.
+Logical records: channels/authorizations, streams, transcript segments/batches, question candidates, games (configured round count), rounds (mode, prompt, deadline and lifecycle), participants, submissions, score entries and generation jobs. Define migrations and uniqueness/idempotency boundaries for transcript batches, command retries and score entries. One submission per viewer per round is the first-build rule.
 
 Recommended job properties: explicit queued/running/succeeded/failed states, attempt counts, recoverable claims, source identifiers, bounded retries and a visible failure state. If timed rounds are selected, closing a round must remain possible after a restart and must not depend solely on a live Python task holding a timer.
 
@@ -165,7 +175,7 @@ Recommended job properties: explicit queued/running/succeeded/failed states, att
 
 1. **Contract milestone:** shared payload examples, auth expectations and error states unblock both frontends.
 2. **Source milestone:** dashboard collector sends real caption text to intake; resolve fallback if it cannot.
-3. **Playable milestone:** one prepared quote, one game/round, two private answers, agreed evaluation, interim and final standings.
+3. **Playable milestone:** one prepared prompt per mode, one game, private answers, mode scoring, interim standings and the final board after the configured round count.
 4. **Dynamic milestone:** replace prepared candidates with validated live-source generation.
 5. **Reliable milestone:** real Twitch identity, live synchronization, retries, reconnect/restart behavior and deployment verified together.
 
@@ -174,7 +184,6 @@ Authentication and authorization must protect any publicly deployed milestone. F
 ## 7. Explicitly outside this backend release
 
 - Viewer and dashboard visual implementation, except collaborating on contracts and collector integration.
-- Niche and hive-mind generation/scoring.
 - Automatic ad/event triggers, scheduling and related scopes.
 - Public-chat answers, chat moderation or a chatbot.
 - VOD imports and long-term historical competitions.
@@ -183,9 +192,6 @@ Authentication and authorization must protect any publicly deployed milestone. F
 
 ## 8. Decisions required before dependent implementation
 
-- Round progression: manual open/close, manual open plus timed close, or automatically advancing timed rounds.
-- Scoring: correct-answer points, wrong-answer treatment, speed weighting, ties and leaderboard reset boundary.
-- Submission policy: final first answer or edits until closure.
 - Quote equivalence: typo tolerance and how synonyms/paraphrases are judged.
 - Candidate policy: streamer approves questions or generated candidates can be selected automatically.
 - Infrastructure: API/worker hosting, PostgreSQL access library and connection mode, worker/job mechanism and model provider. FastAPI and Supabase PostgreSQL are already selected.

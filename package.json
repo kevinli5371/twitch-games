@@ -1,0 +1,11 @@
+{
+  "name": "twitch-games-viewer-extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/dev-server.mjs",
+    "cert": "node scripts/create-local-cert.mjs",
+    "check": "node --check public/overlay.js && node --check public/preview.js && node --check public/demo-adapter.js && node --check scripts/dev-server.mjs && node --check scripts/create-local-cert.mjs"
+  }
+}

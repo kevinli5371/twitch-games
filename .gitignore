@@ -1,0 +1,4 @@
+.env*
+!.env.example
+public/extension-config.local.js
+certs/
