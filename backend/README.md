@@ -25,6 +25,10 @@ Correct: 1 point. Incorrect: 0. No speed bonus. Latest accepted answer revision 
 
 The owner subsequently confirmed moderator access: `question_review` may see unrevealed answers. `live_control` and `settings` alone may not. App grants are distinct from a Twitch moderator badge; a badge alone grants no privileged backend access.
 
+## Supabase HTTPS storage
+
+The owner selected project URL + server secret for runtime connectivity. Install tested migration `0005_http_rpc` before setting `TWITCH_GAMES_STORAGE_BACKEND=supabase_http`. See [migration/setup and verification](docs/supabase-http-migration.md) and [SQL-editor install](docs/supabase-http-install.sql). The hosted gateway has accepted the configured key; hosted RPC installation/activation is still pending. SQL mode remains available for local Docker tests and migration tooling. Existing game and Twitch authentication contracts are unchanged.
+
 ## Setup
 
 From `backend/`, using Python 3.12–3.14 (verified with 3.14.3):
@@ -39,6 +43,9 @@ Fill `.env` locally; it is Git-ignored and excluded from the Docker build. Confi
 
 | Variable | Purpose |
 | --- | --- |
+| `TWITCH_GAMES_STORAGE_BACKEND` | `postgres` (default) or `supabase_http` after migration. |
+| `TWITCH_GAMES_SUPABASE_URL` | HTTPS project URL for the selected HTTP runtime. |
+| `TWITCH_GAMES_SUPABASE_SECRET_KEY` | Server secret key, kept only in FastAPI. |
 | `TWITCH_GAMES_DATABASE_URL` | Supabase PostgreSQL URI, with explicit TLS. Direct/session-pooler URI recommended for migrations. |
 | `TWITCH_GAMES_TWITCH_CLIENT_ID` | OAuth Application Client ID for dashboard login and public Helix lookups. |
 | `TWITCH_GAMES_TWITCH_CLIENT_SECRET` | OAuth Application Client Secret, server-only. |
@@ -62,7 +69,7 @@ Generate the encryption key once:
 .venv/bin/python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'
 ```
 
-No Supabase Data API key, Supabase Auth secret, or AI key is required. `TWITCH_GAMES_TEST_TWITCH_BASE_URL` and `TWITCH_GAMES_TEST_DATABASE_URL` are test-harness-only; do not add them to ordinary `.env` files. The HTTP provider override is restricted to test-mode loopback.
+SQL mode needs no Data API key. HTTP mode uses the server secret above; neither mode adds Supabase Auth or an AI key. `TWITCH_GAMES_TEST_TWITCH_BASE_URL`, `TWITCH_GAMES_TEST_SUPABASE_HTTP_URL` and `TWITCH_GAMES_TEST_DATABASE_URL` are test-harness-only; do not add them to ordinary `.env` files. The HTTP provider override is restricted to test-mode loopback.
 
 Read-only Twitch checks and explicit owner-ID setup:
 
@@ -117,3 +124,5 @@ Never point disposable integration tests or migration downgrades at hosted Supab
 Use HTTPS, production mode, disabled docs, exact CORS origins, and matching registered callback/dashboard URLs. The HttpOnly cookie uses `SameSite=Lax`; serve dashboard and API on the same site (or reverse proxy API requests). On localhost, use `localhost` consistently rather than mixing it with `127.0.0.1`. CSRF tokens come from `/auth/me` and are required for cookie-authenticated POST/PUT/DELETE requests.
 
 Hosting/domain selection and actual desktop/iOS/Android Twitch surfaces remain external integration work. Do not claim deployment, caption-source feasibility, Twitch approval or device testing from the automated local checks.
+
+The Docker verifier now runs the API suite through both SQL and actual PostgREST HTTP storage. Its fake API-key gateway models Supabase gateway authentication only; SQL/RPC execution uses the official pinned PostgREST image. All test keys are synthetic, loopback-only and isolated from `.env`.

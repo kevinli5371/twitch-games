@@ -24,7 +24,9 @@ class Settings(BaseSettings):
     docs_enabled: bool = True
     cors_origins: list[str] = []
     database_url: SecretStr | None = None
+    storage_backend: Literal["postgres", "supabase_http"] = "postgres"
     supabase_url: str | None = None
+    test_supabase_http_url: str | None = None
     supabase_secret_key: SecretStr | None = None
     database_connect_timeout_seconds: int = Field(default=3, ge=1, le=30)
     database_pool_size: int = Field(default=5, ge=1, le=20)
@@ -73,6 +75,19 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_twitch(self) -> "Settings":
+        if self.test_supabase_http_url:
+            parsed_test = urlsplit(self.test_supabase_http_url)
+            if (
+                self.environment != "test"
+                or parsed_test.scheme != "http"
+                or parsed_test.hostname not in {"localhost", "127.0.0.1"}
+                or parsed_test.username
+                or parsed_test.password
+                or parsed_test.path not in {"", "/"}
+                or parsed_test.query
+                or parsed_test.fragment
+            ):
+                raise ValueError("Supabase test transport is restricted to test-mode loopback")
         if self.test_twitch_base_url:
             parsed = urlsplit(self.test_twitch_base_url)
             if (

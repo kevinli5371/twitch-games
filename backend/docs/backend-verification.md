@@ -52,3 +52,11 @@ The owner approved backend merge on November 2 with full Twitch/frontend E2E def
 The actual dashboard API client, caption queue and viewer adapter now run against Uvicorn/PostgreSQL in `scripts/fullstack_clients.mjs`, invoked by the Docker verification suite. A real 30-second quote round verifies private edits, scoring, state restoration, final standings and logout. A disposable browser check also exercised the actual dashboard and two viewer UIs (correct and incorrect outcomes), reload and the mobile entry at 390px. Twitch identity/captions in these checks remain explicit fixtures. See root `docs/fullstack-integration.md` for current setup and remaining real Twitch/deployment checks.
 
 A later read-only hosted connectivity check found the configured direct host has an IPv6 DNS record, but this machine returns `EHOSTUNREACH` for IPv6 TCP; authentication is not reached. The previously successful hosted checks are historical observations, not a claim of current connectivity. Session-pooler configuration is pending.
+
+## Supabase HTTPS storage migration
+
+The configured modern server key was accepted by the real HTTPS Data API gateway. The hosted backend RPC migration is not yet installed; this credential check does not establish hosted gameplay readiness.
+
+Local migration 0005, 151 Python tests plus 10 subtests, 16 Node tests, real SQL/HTTP API checks and the actual dashboard/viewer JS round passed. All 24 API operations had successful HTTP cases through the real PostgREST adapter. Additional real RPC checks verified batch rollback, 105 concurrent submissions, identical retry receipts, exactly-once scoring, own rank outside the top 100, refresh fencing, and revoked grants. A deliberately failed startup RPC recovered and timers still finalized the real 30-second round; readiness includes worker initialization. PostgreSQL/PostgREST/gateway resources were removed after each run. Twitch and gateway-key mapping in these repeatable checks are explicit fixtures; database transactions and API execution are real.
+
+See `supabase-http-migration.md` for the exact install script, role boundaries, activation and pending hosted proof. Existing real Twitch/caption/device/deployment limits remain.

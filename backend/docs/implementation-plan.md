@@ -53,3 +53,7 @@ The owner asked to continue implementation while setup questions are answered. I
 ## Verification status on November 2
 
 Real Twitch browser OAuth, verified identity, cross-workspace denial and refresh exchange passed. Local HTTP checks successfully exercised all 24 runtime operations, including matching, scoring, deadlines, restart recovery and permission revocation. See [endpoint-test-coverage.md](endpoint-test-coverage.md). Step 4 still needs observed real caption capture; Step 8 still needs installed Extension JWTs/PubSub, connected frontend and device/deployment verification. The broader three-mode product requirements on main are separate from the implemented quote runtime and remain subject to scope alignment.
+
+## Supabase HTTPS change
+
+The owner subsequently selected project URL + server secret for runtime storage. The complete HTTP adapter and atomic RPC migration pass isolated PostgreSQL/PostgREST verification; the real gateway accepts the key. Hosted RPC installation/activation remains pending. See supabase-http-migration.md for exact implementation, migration and deployment status. This keeps Twitch auth and the agreed quote policies unchanged.

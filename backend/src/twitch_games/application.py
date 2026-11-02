@@ -18,7 +18,11 @@ from twitch_games.contracts.models import ErrorEnvelope
 from twitch_games.database import Database
 from twitch_games.errors import GameError
 from twitch_games.game_service import GameService
+from twitch_games.http_auth import HTTPAuth
+from twitch_games.http_game_service import HTTPGameService
+from twitch_games.http_publisher import HTTPPublisher
 from twitch_games.routes import router as game_router
+from twitch_games.supabase_http import SupabaseHTTP
 from twitch_games.synchronization import Publisher
 
 logger = logging.getLogger(__name__)
@@ -81,20 +85,70 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app):
-        database = Database(settings) if settings.database_url is not None else None
+        http_storage = settings.storage_backend == "supabase_http"
+        database = (
+            (
+                SupabaseHTTP(settings)
+                if settings.supabase_url and settings.supabase_secret_key
+                else None
+            )
+            if http_storage
+            else (Database(settings) if settings.database_url else None)
+        )
         app.state.database = database
-        auth = app.state.auth = Auth(settings, database)
-        service = app.state.game_service = GameService(database, auth)
-        publisher = app.state.publisher = Publisher(database, auth)
+        auth = app.state.auth = (HTTPAuth if http_storage else Auth)(settings, database)
+        service = app.state.game_service = (HTTPGameService if http_storage else GameService)(
+            database, auth
+        )
+        publisher = app.state.publisher = (HTTPPublisher if http_storage else Publisher)(
+            database, auth
+        )
         tasks = []
-        if database and await asyncio.to_thread(database.status) == "ok":
+        app.state.runtime_ready = False
+
+        async def start_workers():
             if settings.oauth_configured:
                 await asyncio.to_thread(auth.maintenance, True)
-            tasks = [
-                asyncio.create_task(maintenance(service.close_due, 0.25)),
-                asyncio.create_task(maintenance(publisher.publish_one, 0.25)),
-                asyncio.create_task(maintenance(auth.maintenance, 60)),
-            ]
+            if getattr(auth, "stopping", False):
+                return
+            tasks.extend(
+                [
+                    asyncio.create_task(maintenance(service.close_due, 0.25)),
+                    asyncio.create_task(maintenance(publisher.publish_one, 0.25)),
+                    asyncio.create_task(maintenance(auth.maintenance, 60)),
+                ]
+            )
+            if hasattr(service, "generate_due"):
+                tasks.append(asyncio.create_task(maintenance(service.generate_due, 1)))
+            app.state.runtime_ready = True
+
+        async def await_database():
+            while not getattr(auth, "stopping", False):
+                work = asyncio.create_task(asyncio.to_thread(database.status))
+                try:
+                    status = await asyncio.shield(work)
+                except asyncio.CancelledError:
+                    await work
+                    raise
+                if status == "ok":
+                    work = asyncio.create_task(start_workers())
+                    try:
+                        await asyncio.shield(work)
+                    except asyncio.CancelledError:
+                        await work
+                        raise
+                    except (GameError, SQLAlchemyError) as error:
+                        logger.warning("Runtime startup retry (%s)", type(error).__name__)
+                        await asyncio.sleep(3)
+                        continue
+                    return
+                await asyncio.sleep(3)
+
+        if database:
+            if await asyncio.to_thread(database.status) == "ok":
+                await start_workers()
+            else:
+                tasks.append(asyncio.create_task(await_database()))
         try:
             yield
         finally:
@@ -183,7 +237,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         db_status = database.status() if database else "not_configured"
         auth_ready = settings.oauth_configured and settings.extension_configured
         notifications = request.app.state.publisher.configured
-        ready = db_status == "ok" and auth_ready and notifications
+        ready = (
+            db_status == "ok" and auth_ready and notifications and request.app.state.runtime_ready
+        )
         return JSONResponse(
             status_code=200 if ready else 503,
             content={

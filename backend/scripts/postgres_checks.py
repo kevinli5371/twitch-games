@@ -11,6 +11,7 @@ from uuid import uuid4
 
 import psycopg
 from sqlalchemy.engine import URL
+from support.postgrest_fixture import postgrest_fixture
 
 ROOT = Path(__file__).resolve().parents[1]
 IMAGE = "postgres:17@sha256:3b0cda93be7c8dba2ed484d19393d93845dc3dafb88973e248ba8e6d99d784e1"
@@ -46,6 +47,8 @@ def main() -> None:
             name,
             "--publish",
             "127.0.0.1::5432",
+            "--publish",
+            "127.0.0.1::3000",
             "--env",
             "POSTGRES_PASSWORD",
             "--env",
@@ -96,6 +99,7 @@ def main() -> None:
             TWITCH_GAMES_TEST_DATABASE_URL=dsn,
         )
         with psycopg.connect(dsn) as connection:
+            connection.execute("CREATE ROLE service_role NOLOGIN BYPASSRLS")
             connection.execute("CREATE ROLE anon NOLOGIN NOSUPERUSER NOBYPASSRLS")
             connection.execute("CREATE ROLE authenticated NOLOGIN NOSUPERUSER NOBYPASSRLS")
             version = connection.execute("SHOW server_version").fetchone()[0]
@@ -137,7 +141,13 @@ def main() -> None:
         print("Legacy OAuth session migration up/down/up preserved protected data.", flush=True)
         alembic("upgrade", "head")  # Repeatable application does not recreate data.
         run(sys.executable, "-m", "pytest", "-q", "--tb=short", "-W", "error")
-        run(sys.executable, "scripts/live_game_checks.py")
+        if not os.environ.get("HTTP_ONLY_CHECK"):
+            run(sys.executable, "scripts/live_game_checks.py")
+        with postgrest_fixture(dsn, name) as rest_url:
+            environment["TWITCH_GAMES_TEST_SUPABASE_HTTP_URL"] = rest_url
+            run(sys.executable, "scripts/http_storage_checks.py")
+            run(sys.executable, "scripts/live_game_checks.py")
+            environment.pop("TWITCH_GAMES_TEST_SUPABASE_HTTP_URL")
         run(sys.executable, "scripts/smoke_test.py", "--database-status", "ok")
         bad_url = url.set(database="missing_database_test").render_as_string(hide_password=False)
         environment["TWITCH_GAMES_DATABASE_URL"] = bad_url
