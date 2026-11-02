@@ -1,6 +1,6 @@
 # Twitch Games backend
 
-FastAPI + Supabase PostgreSQL backend for the native Twitch quote-completion Extension. All backend code, migrations, configuration, tests and handoff documents live here. This README and `AGENTS.md` record later owner decisions that supersede the historical root specifications and foundation-only reports.
+FastAPI + Supabase PostgreSQL backend for the native Twitch quote-completion Extension. All backend code, migrations, configuration, tests and handoff documents live here. This README describes the implemented quote runtime. Newer root product documents describe additional three-game workflows; see the scope-alignment note in `docs/pr-1-reconciliation.md` before treating those as implemented.
 
 ## Implemented
 

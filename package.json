@@ -1,0 +1,11 @@
+{
+  "name": "twitch-games-workspace",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Streamer dashboard fixture preview and FastAPI backend foundation",
+  "scripts": {
+    "dev": "node scripts/preview.mjs",
+    "test": "node --test tests/*.test.mjs apps/dashboard/model.test.mjs"
+  },
+  "engines": { "node": ">=22" }
+}

@@ -1,6 +1,6 @@
 # Stream Quote Game — product and architecture specification
 
-Version: 0.3 · November 1, 2026
+Version: 0.5 · November 1, 2026
 
 This specification captures the agreed product and proposes an architecture for delivering it. It is a product specification, not an implementation or a claim that Twitch captions have been tested successfully. Items marked **Proposed** are recommendations for review. Items marked **Open** have not been decided and must not silently become implementation defaults.
 
@@ -28,10 +28,10 @@ The owner explicitly asked that unspecified product behavior **not be assumed**.
 | Broadcasting software | OBS is not required for the chosen native Extension. Do not replace it with broadcast graphics as the primary viewer interface. |
 | Chat | “Chat” describes the participating audience. Players submit through **our own UI**, not public Twitch chat. |
 | Platforms | Account for desktop and mobile. Native desktop and mobile presentation differ; do not promise an on-video mobile overlay. |
-| Initial modes | Implement **only quote completion** initially. Niche and hive mind remain future modes. |
+| Initial modes | Quote completion, niche, and hive mind all launch in the first release. Design the dashboard for all three. |
 | Quote answers | Typed free text, normally one missing word, lenient spelling, and reasonable paraphrases/equivalents. Not multiple choice. |
-| Control | The streamer chooses when to activate the game. Per-question approval and round progression were not resolved. |
-| Results | Interim results/leaderboard and a final leaderboard are required. Exact point values and reset boundaries were not resolved. |
+| Control | Hybrid operation: streamer-controlled automation and scheduling, with moderator-reviewed questions entering an approved bank for automatic play. Detailed permissions, triggers, and progression rules remain open. |
+| Results | Scores reset per game; show interim standings after each round and everyone at game/session end. Exact points and final-list presentation remain open. |
 | Captions | A documented caption event was researched, but real stream capture has **not** been proven. Automatic transcripts for arbitrary channels are not an available assumption. |
 | Backend ownership and stack | Kevin owns the backend, transcript processing and generation. Python + FastAPI and Supabase PostgreSQL are selected; the backend work scope is approved. |
 
@@ -43,9 +43,9 @@ A captioned passage contains “I cannot believe we won with a spoon.” The gam
 
 Build a Twitch Extension that lets a streamer run games based on what has been said during their live broadcast. Viewers participate through the Extension's own interface. The streamer monitors and controls play from a dashboard.
 
-The first release contains **only the quote-completion game**:
+The first release contains **quote completion, niche, and hive mind**, with a dashboard designed for all three. The following quote-completion requirements remain confirmed; mode-specific rules for niche and hive mind still need refinement:
 
-- Use quotes from the current stream to generate fill-in-the-blank prompts.
+- Use sourced broadcast quotes to generate fill-in-the-blank prompts. Previous broadcasts are allowed as product direction; historical intake is deferred backend work, not an implemented fallback.
 - Each prompt normally removes one word.
 - Viewers type their answers into our UI, rather than public Twitch chat.
 - Accept spelling mistakes and reasonable equivalent wording. The exact boundary for semantic equivalents remains open.
@@ -53,16 +53,16 @@ The first release contains **only the quote-completion game**:
 - The streamer chooses when to activate the game.
 - Support desktop and mobile viewers.
 - Desktop uses a native Twitch Extension over the video. OBS is not required.
-- Future automatic triggers, such as starting during an ad break, are accounted for in the architecture but are **not implemented in this release**.
+- Ad-triggered starts remain future work. Streamer-controlled automatic starts and dashboard scheduling are now confirmed product direction; detailed rules and release placement remain open (section 4).
 
-Later game modes, recorded for future work:
+Additional first-release game modes:
 
 | Mode | Agreed direction | Still unspecified |
 | --- | --- | --- |
-| Niche | Answers submitted by fewer players score better. | Validity checking, scoring formula, grouping equivalent answers, ties. |
-| Hive mind | Players submitting the most common answer receive points. | Point value, tie handling, grouping equivalent answers. |
+| Niche | Each question has a set of valid words. Rank submitted valid answers into tiers dynamically by frequency during that question; the least-used valid words occupy the highest tier. No pre-sorted rarity tiers. | Tier boundaries, tied frequencies, point mapping, and how the owner's participation-based scoring direction relates to rarity tiers. |
+| Hive mind | Submitted-answer frequency determines which word/group is most common dynamically. | Whether a valid-word list is required, tied frequencies, point mapping, and participation-based scoring details. |
 
-Neither later mode has screens, generation logic, or scoring in the first release. Chat-command participation, VOD import, monetization, and cross-stream competitions are also outside the agreed first-release scope unless added explicitly.
+All three modes require playable viewer flows, dashboard support, and agreed scoring in the first release. Chat-command answer participation, monetization, and cross-stream competitions remain outside the agreed first-release scope unless added explicitly. Previous-broadcast quote sourcing is permitted but its backend ingestion is deferred from the current dashboard work; no VOD import is implemented or selected. Audience question suggestions use an Extension form and require approval into the bank.
 
 ## 2. Architecture at a glance
 
@@ -141,7 +141,7 @@ Twitch supports shared responsive or separate mobile and web front ends. Its mob
 | Idle | No active game / streamer has not started. | Open the Extension and view participation information. |
 | Context unavailable | The game is waiting for sufficient usable stream context. | Wait; no invented live question is substituted. |
 | Answering | Quote with a blank and the round's status/deadline. | Type and submit an answer. |
-| Submitted | Server-confirmed submission receipt. | Continue watching; editing depends on the open submission rule. |
+| Submitted | Server-confirmed submission receipt. | Continue watching; one final answer per question, with no revisions. |
 | Closed / scoring | Submissions are closed; results are being finalized. | Wait for results. |
 | Round results | Full quote, own outcome, awarded points, interim leaderboard. | View results and wait for the next round. |
 | Game ended | Final leaderboard for the completed game. | View final standing. |
@@ -163,6 +163,40 @@ The dashboard is a separate web application authenticated with the streamer's Tw
 
 **Confirmed responsibilities:** activate the game, monitor interim results and leaderboards, and end with a final leaderboard.
 
+### Confirmed dashboard direction — November 1, 2026
+
+- Use a hybrid system: automate play while keeping control over how games run with the streamer.
+- The streamer has a moderator team that can review audience-submitted questions, create their own questions, and approve AI-generated questions for fill-in-the-blank play.
+- Approved questions enter a question bank and can be launched automatically into subsequent games. Approval is separate from launching a question; the streamer need not approve each question again at launch.
+- Support automatic game starts and games scheduled through the dashboard, under streamer control. Exact automatic-start conditions, scheduling rules, and first-release delivery scope still need to be settled. Ad-triggered starts remain deferred unless explicitly added.
+- Quote completion, niche, and hive mind all launch in the first release. Design the dashboard for all three modes.
+- **Confirmed mode selection:** offer an exact round order chosen by the streamer or randomized mode selection. Automatic + randomized operation requires no manual mode choices from the streamer. Random rotation must never select the same mode in consecutive rounds. A separately selected random-mode pool is not a required setup step. Whether an explicitly chosen order may repeat modes consecutively remains open; the confirmed no-repeat restriction applies to random rotation. The pre-start supply check applies to either selection method.
+- **Confirmed hierarchy:** a question is one prompt; a round is 3–5 questions in one mode; a game contains multiple rounds, potentially mixing modes, and ends with a final leaderboard. Random rotation's no-consecutive-repeat rule applies between rounds.
+- **Confirmed game length:** randomly choose 3, 4, or 5 questions for each round; the streamer chooses the number of rounds per game. The random distribution, when the count is drawn/displayed, allowed round-count range, and behavior when too few approved questions are available remain open.
+- **Confirmed authority model:** the streamer is the top-level channel owner and can assign different permissions to individual moderators. Question management and live game operation are permission categories the streamer can delegate; moderators do not automatically receive all dashboard powers. The streamer alone grants/revokes permissions and retains overall control. Exact permission granularity, defaults, and team onboarding remain open.
+- **Confirmed moderator-created question approval:** a moderator who has approval permission can create a question directly in the approved bank; a second person's review is not required. The workflow for authors without approval permission remains open.
+- **Confirmed audience question submission:** viewers suggest questions through a form in our Extension UI. Suggestions enter the moderator review queue; only approved questions enter the playable bank. Twitch chat commands are not a question-submission surface. Form fields, mode selection, submission limits, and feedback to the submitting viewer remain open.
+- **Confirmed question reuse:** after a question is used, it becomes unavailable for selection while on cooldown, rather than being permanently retired. Use one channel-wide cooldown setting for all questions, measured in completed games, with no per-question or per-mode overrides. Moderators can configure the number of completed games subject to the streamer's permission model. The default/allowed values, whether the game containing the question counts toward cooldown, effects of changing the setting on already-cooling questions, manual early release, and cancellation/early-end counting remain open. Cooldown expiry does not override source validation: current or historical broadcast quotes must remain approved and traceable to their actual source.
+- **Confirmed pre-start supply check:** before starting a game, reserve enough approved, off-cooldown, source-eligible questions to finish its planned rounds. Account for the configured round count, random 3–5-question round lengths, and selected/random mode rules. Do not start a game if sufficient eligible supply cannot be reserved. Instead, offer the streamer/authorized moderator a cooldown adjustment/reset or cancellation of that game start; after any adjustment, recheck eligibility and reserve before starting. This applies to manual, scheduled, and automatic starts. Exact planning/draw timing and missed scheduled-start behavior remain open.
+- **Confirmed low-bank experience:** notify the streamer/moderator operators when question supply is low without pausing the ongoing game just to deliver the warning. The pre-start reservation supplies the current game; dashboard bank counts should flag the need to replenish questions for future games. The insufficient-supply popup offers cooldown shortening/reset or cancellation of the attempted game start. Warning thresholds, precise cooldown reset scope/permissions, reservation release on cancellation, and handling edits/removal/source invalidation of reserved questions remain open. Do not silently bypass approval, cooldown, source eligibility, or the random-mode no-consecutive-repeat rule.
+
+### Latest owner decisions — gameplay and recovery
+
+These decisions supersede earlier open questions or narrower proposals elsewhere in this document.
+
+- **Quote sources:** previous broadcasts may supply quote-completion questions. Historical sourcing/transcript intake is deferred backend work outside the current dashboard scope. This relaxes the earlier current-stream-only restriction, including its cooldown restriction; reuse still requires an approved, traceable, eligible source. Live captions are unverified, and no live-audio fallback has been selected. Show source broadcast provenance; never label historical material as current-stream capture.
+- **Niche:** maintain a set of valid words per question, then calculate popularity tiers from actual answers during that question. Least-used valid words occupy the highest tier, with more-used valid words in lower tiers. Tiers are not preassigned to the answer list. Exact tier boundaries and ties remain open.
+- **Hive mind:** determine the most common word/equivalent group from actual submitted answers. Whether hive mind also requires a predefined valid-word list remains open.
+- **Scoring clarification needed:** the owner's response to speed/scoring was: “No for niche + hive mind its just whether or not you got an answer out.” Do not introduce speed weighting for those modes. Whether every submission earns participation points, whether validity matters for participation points, and how points relate to niche tiers/hive mind popularity remain open. Quote-completion points and tie ranking are also unresolved.
+- **Progression and controls:** questions automatically close on a streamer-configured timer, reveal results, and advance. Authorized operators can pause, skip questions, and end the game; the streamer has full control. Exact timer defaults, result-display duration, and skip/cancellation scoring remain open.
+- **Submissions and equivalence:** one final answer per viewer per question, without revisions. Build backend equivalence handling for answers; exact normalization, synonym/alias policy, and evaluation rules still need definition and validation.
+- **Results:** reset scores for each game, show an interim leaderboard after each round, and show everyone at the end of the whole game/session. Do not limit the final standings to only top players. Whether “everyone” means all participants including zero-score players, and how to present the full list, remain open. No additional hierarchy above game/session has been established. Public answer/group visibility is still undecided.
+- **Authority:** the streamer can perform all operations and alone grants/revokes individual moderator permissions. Question review, live controls, and settings are separate permission categories. Detailed onboarding and permissions within categories remain open.
+- **Dashboard recovery:** reopening/reconnecting continues from the saved game position rather than starting over. Do not assume the game finishes unattended after a dashboard disconnect. The exact disconnect/pause trigger, remaining timer treatment, multiple-operator connection behavior, and viewer display during interruption remain open; preserve accepted submissions, scores, and reserved questions.
+- **Deferred:** revisit automatic-start triggers and scheduling rules in a later discussion; do not invent defaults for them.
+
+**Open:** moderator onboarding and exact permission granularity/defaults; workflow for question authors without approval permission; audience suggestion form fields, mode selection, limits, and feedback; question editing/rejection; bank organization, cooldown configuration, and stream boundaries; mode-specific question requirements; timer defaults and detailed operator-control outcomes; schedule recurrence/timezone; reservation edge cases and detailed disconnect/timer recovery. Audience question suggestions through the Extension form are distinct from private gameplay answer submissions, which also remain through our UI.
+
 **Proposed dashboard areas:**
 
 | Area | Information / controls |
@@ -174,9 +208,9 @@ The dashboard is a separate web application authenticated with the streamer's Tw
 | Live monitoring | Current prompt, participation count, round state, scoring status. |
 | Results | Round outcome, interim leaderboard, final leaderboard. |
 
-Question approval/editing and manual advancement are **proposed**, not yet agreed behavior. Whether the streamer approves every candidate or allows automatic selection must be decided before implementing that workflow.
+Question approval into a bank, automatic question advancement, and operator pause/skip/end controls are **Confirmed**. Detailed editing, timing, and cancellation behavior remain **Open**.
 
-Only authorized channel controllers may start games, see unrevealed answers, or manage questions. Moderator/editor access is not part of the agreed scope.
+Only authorized channel controllers may start games, see unrevealed answers, or manage questions. The streamer assigns permissions to individual moderators, including question-management and live-operation access. Enforce those grants on the backend; a Twitch moderator role alone does not imply every dashboard permission. Exact permissions, defaults, and access to unrevealed answers remain open. General editor access is not confirmed.
 
 ## 5. Transcript intake
 
@@ -200,13 +234,13 @@ The dashboard embed must follow Twitch's visibility, minimum-size, HTTPS, and pa
 
 ### Fallback decision
 
-**Open:** when captions are absent, should the first release require the streamer to enable compatible captions, or should we build streamer-authorized microphone/broadcast-audio transcription?
+**Deferred backend decision:** previous-broadcast quote sourcing is permitted, but historical transcript ingestion is outside the current dashboard scope. No audio/transcription fallback has been chosen for missing live captions; do not assume automatic historical import or audio capture works.
 
 An audio path would add capture controls, a transcription integration, capture status, and stop/pause behavior. Capturing a microphone alone does not capture the entire broadcast mix. That work is not silently included in the first release.
 
 ### Transcript boundaries
 
-- Use material from the current stream for first-release prompts.
+- Quotes may come from the current stream or previous broadcasts. Historical ingestion is deferred backend work; preserve and display actual source provenance.
 - Preserve evidence linking each generated question to the transcript it came from.
 - Do not treat transcript text as instructions to the generation system.
 - Do not infer that a named speaker is the streamer unless the source establishes that identity.
@@ -230,17 +264,18 @@ The model may select the passage and blank, but it must not invent or rewrite a 
 
 **Proposed rejection conditions:** incomplete or garbled source, no clear answer, overly ambiguous blank, repeated candidate, stale/wrong-stream source, or a source passage inappropriate to publish as a game prompt.
 
-Generate a shared question queue for the channel, not a separate queue for every viewer. Generation frequency, minimum context, quote age, repeat limits, and prompt approval policy are open configuration decisions.
+Generate a shared question queue for the channel, not a separate queue for every viewer. Generation frequency, minimum context, quote age, and detailed repeat limits remain open. Generated questions require approval into the bank before play.
 
 ## 7. Game service and round lifecycle
 
-**Proposed terminology:**
+**Confirmed terminology:**
 
 - **Stream:** the Twitch broadcast providing source material.
-- **Game session:** one streamer-started run ending with a final leaderboard.
-- **Round:** one quote prompt within that game session.
+- **Game / game session:** multiple rounds, potentially mixing modes, ending with a final leaderboard. Starts may be manual, scheduled, or automatic under the streamer's configured rules.
+- **Round:** 3–5 questions in one mode. Random rotation chooses the next round's mode without repeating the preceding mode.
+- **Question:** one prompt viewers answer within a round.
 
-This session boundary is a proposal because the user requested interim and final leaderboards but has not yet specified when scores reset.
+The hierarchy and final leaderboard at game end are confirmed. Each round randomly contains 3–5 questions, and the streamer sets the number of rounds per game. Scores reset per game; detailed configuration limits remain open. Older references elsewhere in this document to a single-prompt “round” or “round ID” should be interpreted as question-level behavior pending a detailed lifecycle/interface revision; they do not override this hierarchy.
 
 **Proposed session lifecycle:**
 
@@ -248,7 +283,7 @@ This session boundary is a proposal because the user requested interim and final
 Inactive -> Active -> Ended
 ```
 
-**Proposed round lifecycle:**
+**Proposed question lifecycle:**
 
 ```text
 Prepared -> Answering -> Closed -> Scored -> Results
@@ -256,15 +291,15 @@ Prepared -> Answering -> Closed -> Scored -> Results
                 +----------+-> Cancelled
 ```
 
-The backend owns transitions, deadlines, question selection, submission eligibility, and score updates. A viewer's clock or UI cannot reopen a closed round.
+The backend owns transitions, deadlines, question selection, submission eligibility, and score updates. A viewer's clock or UI cannot reopen a closed question.
 
-**Proposed operational rules:** one active quote round per channel; do not open a round without a valid prepared question; preserve completed results; cancelled rounds do not award points. Timed versus manual closing, automatic versus manual advancement, cancellation behavior, and session reset rules require confirmation.
+**Proposed operational rules:** one active question per channel; do not open a question without a valid prepared prompt; preserve completed results; cancelled questions do not award points. Timed closing and automatic advancement with operator pause/skip/end controls are confirmed. Timer defaults, cancellation behavior, detailed round lifecycle, and pause/resume mechanics require confirmation.
 
 ### Future triggers
 
-All starts flow through the same authorized game-start operation. Initially, only the dashboard calls it. Later, an ad-break adapter or another trigger can invoke that operation with an explicit trigger source.
+All starts flow through the same authorized game-start operation. Dashboard manual starts, scheduled starts, and agreed automatic-start conditions should use this operation with an explicit trigger source. Exact scheduling/automation behavior and release placement remain open. A later ad-break adapter can invoke the same operation.
 
-Do not implement ad-event subscriptions, scheduling screens, trigger configuration, or ad-related permissions in this release. The architecture should permit them without coupling the game engine to ad logic.
+Do not implement ad-event subscriptions or ad-related permissions in this release. Dashboard scheduling and automatic starts are now confirmed product direction in section 4; their detailed rules and release placement must be resolved before implementation. Keep trigger handling separate from the game engine.
 
 ## 8. Answer evaluation and scoring
 
@@ -284,19 +319,19 @@ Do not accept every near-spelling automatically: short words such as “cat” a
 
 **Proposed implementation approach:** establish the accepted-answer policy before opening the round, evaluate repeated normalized answers consistently, and avoid an unrestricted model call for every keystroke or submission.
 
-**Open scoring rules:** points per correct answer; whether incorrect answers earn zero; speed bonuses; exact versus spelling-tolerant versus synonym acceptance; one submission versus editable answers; tie placement; adjudication/override powers; and the answer window.
+**Confirmed:** one final submission per question, no answer revisions; backend equivalence handling is required. Niche tiers and hive mind popularity are determined dynamically from submitted answers, with no speed weighting for those modes. See section 4 for the owner's participation-based scoring clarification and unresolved point mapping. **Open:** quote-completion points/speed policy, mode-specific point formulas, incorrect/invalid-answer treatment, exact equivalence rules, tie placement, adjudication overrides, and timer defaults.
 
 No score formula or numeric default is assumed in this document. Scores must be applied exactly once per accepted result, even when requests or events are retried. Never deliver unrevealed answers or private scoring keys to viewer clients.
 
 ## 9. Results and leaderboards
 
-**Confirmed:** interim results and leaderboard, followed by a final leaderboard at the end.
+**Confirmed:** reset scores per game, show interim results/leaderboard after each round, and show everyone in the final game/session standings. See section 4 for unresolved zero-score inclusion and full-list presentation. Raw/grouped-answer publication remains open.
 
 **Proposed round-results view:** complete quote, canonical missing word, the player's result, points earned, updated cumulative score, and current leaderboard. Include the source timestamp where meaningful.
 
 **Proposed leaderboard entries:** display name, score, rank, and the current player's position even if outside the visible leaders.
 
-The backend calculates rankings from finalized score records. All clients receive the same finalized ranking version. The number of visible entries, tie presentation, exact interim-result breakdown, score-reset boundary, and historical retention are open. Finalization ends submissions for that game session and publishes its final standings.
+The backend calculates rankings from finalized score records. All clients receive the same finalized ranking version. Interim-list size, final full-list presentation, tie presentation, exact result breakdown, and historical retention remain open. Scores reset per game. Finalization ends submissions for that game session and publishes its final standings.
 
 ## 10. Backend interfaces and real-time delivery
 
@@ -326,11 +361,12 @@ Validate Twitch Extension tokens on the backend. Verify the caller's channel and
 | Stream | Twitch stream ID; channel; start/end; transcript-source state. |
 | Transcript segment | Stream; sequence; source/receipt timestamps; text; provenance. |
 | Question candidate | Stream; source references; complete quote; blanked quote; canonical word; alternatives; validation/review state. |
-| Game session | Channel; stream; mode; state; start/end; scoring-policy version. |
-| Round | Session; candidate; lifecycle state; timing; answer-policy version. |
+| Game session | Channel; stream; multiple rounds; state; start/end; scoring-policy version. |
+| Round | Session; mode; 3–5 questions; sequence; lifecycle state. |
+| Question | Round; candidate; lifecycle state; timing; answer-policy version. Submissions and score entries must identify the individual question. |
 | Participant | Twitch identity; display information; participation permissions. |
-| Submission | Round; participant; answer; normalized answer; receipt time; evaluation state. |
-| Score entry | Session; round; participant; finalized outcome; awarded points; policy version. |
+| Submission | Question; participant; one final answer; normalized answer; receipt time; evaluation state. |
+| Score entry | Session; round; question; participant; finalized outcome; awarded points; policy version. |
 
 Leaderboard views are derived from score entries. Transcript access, raw-answer access, retention periods, transcript deletion, and whether historical final boards remain accessible need explicit decisions before public launch.
 
@@ -344,7 +380,7 @@ Leaderboard views are derived from score entries. Transcript access, raw-answer 
 | Submission retry | Apply the agreed answer-revision policy without accidental duplicate scoring. |
 | Round closes during submission | Decide acceptance using the server's agreed deadline rule. |
 | Extension is hidden | Restore state on return; scoring does not depend on the UI staying mounted. |
-| Dashboard disconnects | Intake status becomes stale; already-confirmed game state remains durable. Exact round continuation policy is open. |
+| Dashboard disconnects | Preserve game position, submissions, scores, and reservations; reopening/reconnecting resumes from where it left off. Do not assume unattended completion. Disconnect detection, timers, multi-operator behavior, and interruption display remain open. Live intake becomes stale if its collector is disconnected. |
 | Answer dispute | Preserve the source and evaluation record. Streamer override capability is an open decision. |
 
 Validation must cover the real caption event, desktop player Extension, iOS and Android entry/keyboard behavior, authorization, wrong-channel isolation, unrevealed-answer leakage, spelling acceptance/rejection, closure boundaries, reconnection, and duplicate score prevention. Load targets and expected concurrent player counts have not been specified.
@@ -354,15 +390,15 @@ Validation must cover the real caption event, desktop player Extension, iOS and 
 These describe the intended outcome; unresolved rules below must be filled in before using them as a final implementation checklist.
 
 1. A streamer connects a channel and sees whether the selected transcript source is working.
-2. The app obtains real current-stream text through the agreed source path.
+2. Quote questions use actual broadcast text with traceable provenance. Live capture and historical intake require separate backend validation and must not be claimed as working from a fixture.
 3. A generated question is traceable to an actual stored quote and removes normally one word.
-4. The streamer can activate and end a quote game through the dashboard.
+4. The streamer and appropriately authorized moderators can operate all three modes through the dashboard, including pause/skip/end controls.
 5. The same active round is available through the desktop and mobile Extension views.
 6. Eligible viewers submit answers through our UI, privately to the backend.
 7. Answers are judged according to the agreed spelling/equivalence and scoring rules.
 8. Players see confirmed submission state, interim results/leaderboard, and a final leaderboard.
 9. Reconnection restores current state and does not duplicate points.
-10. Niche mode, hive mind, and automatic triggers are not implemented or presented as working features.
+10. Quote completion, niche, and hive mind are all playable and manageable from the dashboard. The streamer can select games or enable random rotation; random rotation never repeats the same game consecutively. Ad-triggered starts remain deferred.
 
 For the hackathon, Extension approval is a separate delivery dependency. The organizer warns of a 5–14 day review window and says judges cannot install unreviewed Extensions. A standalone test/judging surface is a proposed contingency, not an agreed replacement for the Extension. [Hackathon FAQ](https://twitchcon-codex.devpost.com/resources).
 
@@ -370,16 +406,22 @@ For the hackathon, Extension approval is a separate delivery dependency. The org
 
 | Decision | What is known | What remains open |
 | --- | --- | --- |
-| Transcript fallback | Current-stream text powers questions; Twitch captions are conditional. | Require captions, or add live audio transcription in the MVP? |
-| Question approval | Prompts are generated dynamically. | Streamer approves/edits each prompt, or generation can publish automatically? |
-| Round progression | Streamer activates the game. | Who advances questions; timer duration; who closes rounds; number of rounds? |
-| Scoring | Correct answers receive points. | Point values, speed weighting, wrong-answer treatment, ties. |
-| Answer revisions | Free-text answers through our UI. | One final answer, or allow changes until close? |
-| Equivalents | Spelling mistakes and some equivalent wording are accepted. | Do synonyms count, and how strict is one-word completion? |
-| Leaderboard boundary | Interim and final boards exist. | One activated game, one stream, or another reset boundary? |
-| Result detail | Interim results are required. | Aggregate correctness, raw/grouped answers, or only personal outcome and ranks? |
-| Source eligibility | Quotes come from the stream so far. | Only the streamer, or other speakers too; supported languages; minimum quote age? |
-| Operations | Durable state and source status are required. | Retention periods, deployment budget, concurrency target, and dashboard-loss behavior. |
+| Transcript fallback | Current or previous broadcasts may supply quotes; historical sourcing is deferred backend work outside current dashboard scope. Live captions remain unverified. | Historical intake implementation and fallback selection; no audio or VOD pipeline is assumed working. |
+| Question approval | Moderators review audience suggestions submitted through an Extension form, create questions, and approve AI fill-in-the-blank questions into a bank for automatic play. Moderators with approval permission can add their own questions directly to the approved bank without a second reviewer. | Suggestion form fields/mode selection/limits/feedback, workflow for authors without approval permission, edit/reject workflow, bank selection, and mode-specific requirements. |
+| Question cooldown | One channel-wide setting, measured in completed games, applies to all used questions without per-question or per-mode overrides. Moderators configure the count subject to streamer-assigned permissions; source eligibility still applies. | Default/allowed counts, whether the game containing the question counts, changes affecting existing cooldowns, manual early release, cancellation/early-end counting, and detailed permissions. |
+| Low question supply | Before any game starts, reserve enough eligible approved/off-cooldown questions to finish. If insufficient, offer cooldown adjustment/reset or cancel the start, then recheck before starting. In-game low-bank warnings do not pause play; dashboard flags replenishment needs for future games. | Warning thresholds, reset scope/permissions, planning/draw timing, missed scheduled starts, reservation release, and changes/invalidation of reserved questions. |
+| Dashboard access | Streamer can do everything and alone grants/revokes moderator permissions; question review, live controls, and settings are separate categories. | Team onboarding, fine-grained permission defaults, and unrevealed-answer access. |
+| Game starts and scheduling | Streamer-controlled hybrid automation, automatic starts, and dashboard scheduling are confirmed direction; insufficient supply prevents starting. Owner explicitly deferred the detailed scheduling discussion. | Trigger conditions, schedule rules/timezone/recurrence, failed-start retries, and first-release placement. Ad triggers remain deferred. |
+| Release modes | All three launch. Niche has a valid-word list and frequency-derived tiers, rarest highest. Hive mind uses the most common submitted word/group. | Tier boundaries/ties, hive mind validity requirements, equivalent grouping, and exact point mapping. |
+| Game selection | Streamer chooses an exact round order or randomized mode selection. Auto + randomized requires no manual mode choices. Each round randomly contains 3–5 questions in one mode; the streamer chooses rounds per game. A game ends with a final leaderboard. Random rotation never repeats the same mode in consecutive rounds; pre-start reservation ensures supply. | Question-count distribution/draw timing, round-count configuration limits, and whether exact orders may repeat a mode consecutively. |
+| Round progression | Streamer-configured timers close questions, reveal results, and auto-advance. Authorized operators can pause, skip, and end games. Each round randomly has 3–5 questions; rounds per game are streamer-set. | Timer defaults/ranges, result-display duration, skip/cancellation outcomes, and precise pause/resume behavior. |
+| Scoring | Dynamic niche tiers and hive mind popularity; no speed weighting for these two modes. Owner described scoring as whether a player “got an answer out.” | Participation versus tier/popularity points, validity effects, quote points/speed weighting, wrong-answer treatment, and ties. |
+| Answer revisions | One final private free-text answer per viewer per question; no edits. | No revision-policy decision remains; retries must preserve the original accepted submission. |
+| Equivalents | Backend equivalence handling is required, including the existing lenient quote-answer direction. | Exact normalization, synonym/alias policy, grouping, and validation. |
+| Leaderboard boundary | Scores reset per game; interim standings after each round; final standings show everyone at game/session end. | Zero-score participant inclusion, full-list presentation, and historical retention. |
+| Result detail | Interim results and final standings are required. | Public raw/grouped answers, response counts, and exact breakdown. |
+| Source eligibility | Quotes may come from current or previous broadcasts; historical intake is deferred backend work. | Eligible speakers, languages, quote age, and historical-source validation. |
+| Operations | Preserve state and resume from the saved position when the dashboard reopens/reconnects. | Retention, budget, concurrency, disconnect/pause detection, timer recovery, and multiple-operator connections. |
 
 No recommendations in this document resolve these open decisions by implication.
 
@@ -432,7 +474,7 @@ Primary sources: [official rules](https://twitchcon-codex.devpost.com/rules), [r
 
 A fresh implementation agent should be able to explain, without the original chat:
 
-- What the first-release quote game does, which modes are deferred, and why it is not ad-only.
+- What all three first-release games do, how streamer-selected versus random rotation works, which rules remain open, and why play is not ad-only.
 - Why the primary desktop surface is a Twitch Extension, why OBS is unnecessary, and how mobile differs.
 - Where typed answers go and why Twitch chat is not the required input surface.
 - Which service owns game state, source evidence, answer evaluation, and scores.

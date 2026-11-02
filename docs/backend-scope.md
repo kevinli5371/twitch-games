@@ -4,6 +4,8 @@ November 1, 2026 · Planning document, not implemented code
 
 This document scopes the backend owned by Kevin. Read it alongside the [product specification](product-spec.md). **Confirmed: Python + FastAPI, Supabase for the managed PostgreSQL database, and approval of this backend work scope.** Backend hosting, model provider, and the gameplay policies listed below remain unselected. Endpoint names are proposed interface details; scope approval does not choose the explicitly unanswered product rules.
 
+> **Product scope update:** the product specification v0.5 supersedes this document's earlier quote-only gameplay assumptions. All three modes launch; a round contains 3–5 questions in one mode and a game contains multiple rounds. Include streamer-assigned moderator permissions, an approved bank with completed-game cooldowns and pre-start reservations, one final submission per question, automatic progression with operator controls, per-game score resets, and resume-from-saved-position recovery. Historical quotes are permitted but their intake remains deferred backend work. Niche tiers/hive mind popularity are dynamic; exact points and automatic-start rules remain open. Preserve the stack/ownership decisions here, but reconcile the proposed entities, contracts, work packages, and older open-policy list against the product specification before implementing them.
+
 ## 1. Ownership boundary
 
 | Owner | Responsibility |

@@ -12,4 +12,6 @@ Preserve confirmed gameplay rules when resolving broader PR #1 differences: firs
 
 OAuth API paths are `/api/v1/auth/twitch`, `/api/v1/auth/twitch/callback`, `/api/v1/auth/me`, `/api/v1/auth/logout`; `/api/v1/auth/session` is a compatibility alias for basic identity. This preserves the callback registered during backend setup. Production origin is still unselected. See `frontend-handoff.md` for permission mapping, cookie/CORS/CSRF requirements, examples and errors.
 
-This document is a concrete integration handoff, not a claim that PR #1 has been merged or the dashboard connected.
+PR #1 is now merged into main (9b16fec). This branch merges that main revision, preserves its dashboard assets, root documentation and planning utilities, and resolves the overlapping runtime to one application factory. `twitch_games.app:app` is a compatibility entry point for `twitch_games.main:app`; planning DTOs are retained in `planning_contracts.py`. The proposed raw SQL is preserved under `docs/legacy/` and is not an alternative runnable migration. Foundation API tests now exercise the real factory and current authentication boundaries; planner tests remain intact.
+
+The newer root product documents describe three launch modes, immutable answers, automatic progression and bank planning. Those differ from the quote-only/editable/manual-start runtime confirmed in this chat. This PR flags that scope alignment for review and does not silently change the runtime or erase the dashboard work. The dashboard is not yet connected to the backend.

@@ -2,7 +2,7 @@
 
 ## Actual observations
 
-- macOS arm64, Python 3.14.3: 130 automated tests passed against an isolated PostgreSQL 17.11 Docker instance. This includes unit/contract checks and real PostgreSQL integration checks; in-process API tests are not labelled live Twitch tests.
+- macOS arm64, Python 3.14.3: 144 automated tests (plus 10 subtests) passed against an isolated PostgreSQL 17.11 Docker instance. This includes unit/contract checks and real PostgreSQL integration checks; in-process API tests are not labelled live Twitch tests.
 - Alembic upgrade, repeat upgrade, downgrade to base and upgrade passed. The dashboard-auth migration also preserved a synthetic legacy encrypted session through 0003 → 0004 → 0003 → 0004. The disposable test container/data were removed.
 - A real Uvicorn process handled HTTP OAuth callbacks/cookies, CSRF, moderator grants and revocation, hidden-answer boundaries, refresh-token rotation/revocation, caption intake and retries, automatic quote selection, private answer edits and receipt retries, the actual 30-second timer, an actual process restart, scoring, tied ranks, final results, per-game reset and request body limits.
 - Twitch for those server tests is a real loopback HTTP provider **fixture**, not Twitch production. Its synthetic credentials never authorize a deployed service. The fixture override is limited to test-mode loopback.
@@ -36,3 +36,7 @@ Real-server checks isolate their working directory and configuration from the de
 The real Twitch browser consent/callback and refresh exchange are observed above. Viewer-issued Extension JWTs, PubSub reception on an installed Extension, live caption availability, frontend integration and desktop/iOS/Android behavior remain unverified. Actual OAuth revocation was tested with the HTTP fixture, not by disconnecting the user’s real Twitch integration. The frontend owners must supply working surfaces and a caption-enabled test stream for those observations. No universal transcript or fallback audio-capture implementation is claimed.
 
 Production hosting/domain, callback/CORS values and real HTTPS cookie behavior remain deployment integration work. The image is packaged locally; no public deployment is claimed. Readiness verifies the database revision and configuration, not a complete Twitch experience.
+
+## Main-branch reconciliation
+
+Merged main at `9b16fec` (PR #1), preserved its dashboard and pure planning utilities, and replaced the duplicate API entry point with a compatibility alias to the implemented factory. The proposed legacy SQL is retained as documentation. After reconciliation, 144 Python tests plus 10 subtests and all 10 Node dashboard/preview tests passed; real HTTP auth/gameplay and migration checks passed again. The preview now rejects encoded backslash paths consistently on macOS and Windows-style paths. Product-policy differences with the newer main specification are flagged for review in pr-1-reconciliation.md.
