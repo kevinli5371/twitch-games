@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     docs_enabled: bool = True
     cors_origins: list[str] = []
     database_url: SecretStr | None = None
+    supabase_url: str | None = None
+    supabase_secret_key: SecretStr | None = None
     database_connect_timeout_seconds: int = Field(default=3, ge=1, le=30)
     database_pool_size: int = Field(default=5, ge=1, le=20)
 
@@ -44,6 +46,7 @@ class Settings(BaseSettings):
         "twitch_extension_secret",
         "twitch_extension_owner_id",
         "token_encryption_key",
+        "supabase_secret_key",
         mode="before",
     )
     @classmethod
@@ -120,6 +123,33 @@ class Settings(BaseSettings):
         if self.twitch_extension_owner_id and not self.twitch_extension_owner_id.isdecimal():
             raise ValueError("Extension owner ID must be a numeric Twitch ID")
         return self
+
+    @field_validator("supabase_url")
+    @classmethod
+    def validate_supabase_url(cls, value):
+        if value is None or not value.strip():
+            return None
+        parsed = urlsplit(value)
+        if (
+            parsed.scheme != "https"
+            or not parsed.hostname
+            or not parsed.hostname.endswith(".supabase.co")
+            or parsed.username
+            or parsed.password
+            or parsed.path not in {"", "/"}
+            or parsed.query
+            or parsed.fragment
+            or parsed.port not in {None, 443}
+        ):
+            raise ValueError("Supabase URL must be an HTTPS project origin")
+        return value.rstrip("/")
+
+    @field_validator("supabase_secret_key")
+    @classmethod
+    def reject_public_api_key(cls, value):
+        if value and value.get_secret_value().startswith("sb_publishable_"):
+            raise ValueError("Supabase HTTP backend requires a server secret key")
+        return value
 
     @field_validator("database_url")
     @classmethod
