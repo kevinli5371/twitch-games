@@ -6,6 +6,15 @@ A Twitch Extension for streamer-controlled games based on the current live broad
 
 Read the [product and architecture specification](docs/product-spec.md) before implementation. It contains the complete project context, confirmed decisions, proposed architecture, platform constraints, open product questions, and acceptance criteria. No access to the original chat is required.
 
+Read the [backend scope and API handoff](docs/backend-scope.md) for Kevin's work packages and the contracts used by both frontend owners.
+
+## Confirmed backend stack and ownership
+
+- **Python + FastAPI** for the application backend, owned by Kevin.
+- **Supabase PostgreSQL** for durable storage.
+- One teammate owns the viewer Extension; another owns the streamer dashboard and browser caption collector.
+- Backend hosting, model provider and worker/job mechanism remain unselected. Supabase Auth/Realtime/Queues are not automatically included by the database choice.
+
 ## Current status
 
 **Documentation only.** This repository does not yet contain application code, installation/run commands, deployments, or validated live integrations. Caption capture, mobile behavior, and Extension approval have not been demonstrated by this repository.

@@ -1,6 +1,6 @@
 # Stream Quote Game — product and architecture specification
 
-Version: 0.2 · November 1, 2026
+Version: 0.3 · November 1, 2026
 
 This specification captures the agreed product and proposes an architecture for delivering it. It is a product specification, not an implementation or a claim that Twitch captions have been tested successfully. Items marked **Proposed** are recommendations for review. Items marked **Open** have not been decided and must not silently become implementation defaults.
 
@@ -33,6 +33,7 @@ The owner explicitly asked that unspecified product behavior **not be assumed**.
 | Control | The streamer chooses when to activate the game. Per-question approval and round progression were not resolved. |
 | Results | Interim results/leaderboard and a final leaderboard are required. Exact point values and reset boundaries were not resolved. |
 | Captions | A documented caption event was researched, but real stream capture has **not** been proven. Automatic transcripts for arbitrary channels are not an available assumption. |
+| Backend ownership and stack | Kevin owns the backend, transcript processing and generation. Python + FastAPI and Supabase PostgreSQL are selected; the backend work scope is approved. |
 
 ### Product example, not a scoring decision
 
@@ -99,7 +100,21 @@ Streamer dashboard <--> Game service <--> Durable database
                   Scores + leaderboards
 ```
 
-**Proposed deployment:** two web interfaces, one application backend, a background generation worker, and a durable database. These are logical responsibilities, not a requirement to create separate microservices. The backend and worker may share a deployment initially. Hosting, framework, database vendor, transcription provider, and model provider remain unselected.
+**Confirmed backend choices:** Python + FastAPI for the API and Supabase PostgreSQL for durable storage. Kevin owns backend implementation. See the [backend scope and API handoff](backend-scope.md) for the approved work packages.
+
+The architecture uses two web interfaces, one application backend, a background generation worker, and the database. These are logical responsibilities, not a requirement to create separate microservices. The backend and worker may share a deployment initially. API/worker hosting, frontend framework, database access library, job mechanism, transcription provider, and model provider remain unselected.
+
+Supabase is the database foundation; choosing it does not automatically choose Supabase Auth or Realtime as replacements for Twitch authentication or Extension messaging. The proposed clients call FastAPI for game operations. FastAPI enforces channel/player authorization and keeps unrevealed answers private. Configure database grants/RLS so private records cannot be read through a separate client-facing database API. Supabase does not by itself host the Python application.
+
+### Engineering ownership
+
+| Workstream | Owner / boundary |
+| --- | --- |
+| Viewer experience | One teammate owns the desktop Twitch overlay and mobile Extension view. |
+| Streamer experience | Another teammate owns the dashboard, including the browser-side caption collector. |
+| Backend and transcript/AI | Kevin owns authentication, caption ingestion/storage, generation, game state, evaluation, scoring, leaderboards, persistence and synchronization. |
+
+The dashboard teammate implements browser collection against Kevin's authenticated intake contract. The team validates real caption delivery together. No team member should assume the collector or its backend is already implemented.
 
 ## 3. Viewer application: Twitch Extension
 
